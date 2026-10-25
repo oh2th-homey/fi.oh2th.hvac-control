@@ -1,0 +1,3 @@
+Stop maintaining heating schedules. Tell the app the facts, such as who is home, who is asleep and whether you are on holiday, and it works out the right temperature for every zone. It stores heat while electricity is cheap, coasts through the expensive hours and prepares for cold weather in the forecast, without ever leaving the comfort range you set for each situation.
+
+Group your thermostats, radiators and on/off heaters into heating zones and the app keeps them in line, rounding each setpoint to what the device actually accepts. Every change comes with a plain-language reason, and a daily plan image shows what will happen and why.

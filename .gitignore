@@ -1,0 +1,17 @@
+# Local / personal, never push
+docs/
+CLAUDE.local.md
+.claude/settings.local.json
+env.json
+.env*
+fixtures-raw/
+
+# Homey / Node
+*.log
+/env.json
+/node_modules/
+/.homeybuild/
+
+# OS / editor
+.DS_Store
+.vscode/

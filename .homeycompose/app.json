@@ -1,0 +1,62 @@
+{
+  "id": "fi.oh2th.heat-cntrl",
+  "version": "1.0.0",
+  "compatibility": ">=12.4.0",
+  "sdk": 3,
+  "runtime": "nodejs",
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "Heating Zone Controller"
+  },
+  "description": {
+    "en": "Comfort when you need it, heat when it's cheap, no schedules"
+  },
+  "category": [
+    "tools"
+  ],
+  "permissions": [
+    "homey:manager:api"
+  ],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "author": {
+    "name": "Tapio Heiskanen",
+    "email": "oh2th@iki.fi"
+  },
+  "brandColor": "#4a90e2",
+  "tags": {
+    "en": [
+      "heating",
+      "thermostat",
+      "energy"
+    ]
+  },
+  "contributors": {
+    "developers": [
+      {
+        "name": "Tapio Heiskanen"
+      }
+    ]
+  },
+  "contributing": {
+    "donate": {
+      "paypal": {
+        "username": "oh2th"
+      },
+      "githubSponsors": {
+        "username": "oh2th"
+      }
+    }
+  },
+  "source": "https://github.com/oh2th-homey/fi.oh2th.heat-cntrl",
+  "bugs": {
+    "url": "https://github.com/oh2th-homey/fi.oh2th.heat-cntrl/issues"
+  },
+  "support": "https://github.com/oh2th-homey/fi.oh2th.heat-cntrl/discussions/categories/general",
+  "homepage": "https://oh2th.fi/tapio/homey/"
+}
