@@ -1,0 +1,22 @@
+{
+  "title": {
+    "en": "Expensive now changed"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=hvac"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "is_expensive",
+      "type": "boolean",
+      "title": {
+        "en": "Expensive now"
+      },
+      "example": true
+    }
+  ]
+}

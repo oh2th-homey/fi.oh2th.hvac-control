@@ -1,0 +1,186 @@
+{
+  "name": {
+    "en": "HVAC Controller"
+  },
+  "class": "other",
+  "capabilities": [
+    "enum_occupancy",
+    "thermostat_mode",
+    "enum_master_mode",
+    "is_expensive",
+    "measure_monetary",
+    "text_prices_until",
+    "text_reason"
+  ],
+  "capabilitiesOptions": {
+    "thermostat_mode": {
+      "title": {
+        "en": "Season"
+      },
+      "values": [
+        {
+          "id": "heat",
+          "title": {
+            "en": "Heating"
+          }
+        },
+        {
+          "id": "cool",
+          "title": {
+            "en": "Cooling"
+          }
+        },
+        {
+          "id": "off",
+          "title": {
+            "en": "Off"
+          }
+        }
+      ]
+    },
+    "measure_monetary": {
+      "title": {
+        "en": "Price now"
+      },
+      "units": {
+        "en": "/kWh"
+      },
+      "decimals": 4,
+      "insights": true
+    }
+  },
+  "$extends": [
+    "device",
+    "pair-single"
+  ],
+  "settings": [
+    {
+      "type": "group",
+      "label": {
+        "en": "Prices"
+      },
+      "children": [
+        {
+          "id": "price_model",
+          "type": "dropdown",
+          "label": {
+            "en": "Price model"
+          },
+          "value": "rate_is_highest",
+          "hint": {
+            "en": "When the price counts as expensive. Rate is highest: short local price peaks (needs 15-minute prices; with hourly prices Above average is used). Above average: the percentage below above today's average. Off: occupancy alone decides."
+          },
+          "values": [
+            {
+              "id": "rate_is_highest",
+              "label": {
+                "en": "Rate is highest"
+              }
+            },
+            {
+              "id": "above_average",
+              "label": {
+                "en": "Above average"
+              }
+            },
+            {
+              "id": "off",
+              "label": {
+                "en": "Off"
+              }
+            }
+          ]
+        },
+        {
+          "id": "price_above_average_pct",
+          "type": "number",
+          "label": {
+            "en": "Above average by"
+          },
+          "value": 30,
+          "min": 0,
+          "max": 500,
+          "step": 1,
+          "units": {
+            "en": "%"
+          },
+          "hint": {
+            "en": "Used by the Above average model."
+          }
+        },
+        {
+          "id": "price_min_delta",
+          "type": "number",
+          "label": {
+            "en": "Minimum price difference"
+          },
+          "value": 0.005,
+          "min": 0,
+          "max": 1,
+          "step": 0.001,
+          "units": {
+            "en": "/kWh"
+          },
+          "hint": {
+            "en": "A price must be at least this much above the average or median to count as expensive, so cheap and flat days are not flagged for fractions of a cent."
+          }
+        },
+        {
+          "id": "price_resolution",
+          "type": "dropdown",
+          "label": {
+            "en": "Price resolution"
+          },
+          "value": "15",
+          "hint": {
+            "en": "Length of one price slot in the imported prices."
+          },
+          "values": [
+            {
+              "id": "15",
+              "label": {
+                "en": "15 minutes"
+              }
+            },
+            {
+              "id": "60",
+              "label": {
+                "en": "60 minutes"
+              }
+            }
+          ]
+        },
+        {
+          "id": "tomorrow_check_time",
+          "type": "text",
+          "label": {
+            "en": "Check tomorrow's prices at"
+          },
+          "value": "15:00",
+          "hint": {
+            "en": "Local time (HH:mm) of the daily check. The trigger Prices missing for tomorrow runs when tomorrow's prices are still missing or partial."
+          }
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": {
+        "en": "Long absence"
+      },
+      "children": [
+        {
+          "id": "absence_until",
+          "type": "text",
+          "label": {
+            "en": "Long absence until"
+          },
+          "value": "",
+          "hint": {
+            "en": "Last day of a long absence (everyone away for days) as YYYY-MM-DD. While set, the mode is Long absence: frost protection only, no cooling. After this day it returns to Auto. Empty: no end date."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "title": {
+    "en": "Target changed"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=zone"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "measure_temperature_set_target",
+      "type": "number",
+      "title": {
+        "en": "Target"
+      },
+      "example": 21
+    },
+    {
+      "name": "text_reason",
+      "type": "string",
+      "title": {
+        "en": "Reason"
+      },
+      "example": {
+        "en": "Away: eco"
+      }
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "type": "enum",
+  "title": {
+    "en": "Mode"
+  },
+  "hint": {
+    "en": "Auto: zones follow occupancy and prices. Long absence: everyone away for days, frost protection only, no cooling. Off: zones stop controlling, frost protection only."
+  },
+  "values": [
+    {
+      "id": "auto",
+      "title": {
+        "en": "Auto"
+      }
+    },
+    {
+      "id": "long_absence",
+      "title": {
+        "en": "Long absence"
+      }
+    },
+    {
+      "id": "off",
+      "title": {
+        "en": "Off"
+      }
+    }
+  ],
+  "getable": true,
+  "setable": true,
+  "uiComponent": "picker"
+}

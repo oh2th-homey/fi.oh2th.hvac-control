@@ -1,0 +1,42 @@
+{
+  "title": {
+    "en": "Season is"
+  },
+  "titleFormatted": {
+    "en": "Season !{{is|is not}} [[season]]"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=hvac"
+    },
+    {
+      "type": "dropdown",
+      "name": "season",
+      "title": {
+        "en": "Season"
+      },
+      "values": [
+        {
+          "id": "heat",
+          "title": {
+            "en": "Heating"
+          }
+        },
+        {
+          "id": "cool",
+          "title": {
+            "en": "Cooling"
+          }
+        },
+        {
+          "id": "off",
+          "title": {
+            "en": "Off"
+          }
+        }
+      ]
+    }
+  ]
+}

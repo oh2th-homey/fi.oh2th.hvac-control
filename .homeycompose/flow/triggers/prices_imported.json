@@ -1,0 +1,32 @@
+{
+  "title": {
+    "en": "Prices imported"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=hvac"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "day",
+      "type": "string",
+      "title": {
+        "en": "Day"
+      },
+      "example": {
+        "en": "tomorrow"
+      }
+    },
+    {
+      "name": "count",
+      "type": "number",
+      "title": {
+        "en": "Number of prices"
+      },
+      "example": 96
+    }
+  ]
+}

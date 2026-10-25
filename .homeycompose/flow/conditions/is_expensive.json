@@ -1,0 +1,15 @@
+{
+  "title": {
+    "en": "Price is expensive"
+  },
+  "titleFormatted": {
+    "en": "Price !{{is|is not}} expensive now"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=hvac"
+    }
+  ]
+}

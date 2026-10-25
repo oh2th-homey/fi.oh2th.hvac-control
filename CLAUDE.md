@@ -150,7 +150,7 @@ immediately); use `.then(() => this.log(…))`.
   Homey capabilities, whatever app owns them. Data sources such as prices come in only as
   tokens on this app's own action cards (e.g. Import prices takes a JSON text token). Other
   apps may appear in README examples only.
-- Inputs are **facts, not modes** (occupancy, holiday, prices, forecast). Never make the user
+- Inputs are **facts, not modes** (occupancy, long absence, prices, forecast). Never make the user
   translate facts into modes in flows; that is what made Homey Heating Scheduler too complex.
 - Few concepts: Heating Zone devices, one required HVAC Controller device (shared state), per zone comfort
   heat/cool setpoints + setback (eco), members. Resist adding plans, schedules or mode lists.

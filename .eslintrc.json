@@ -29,7 +29,10 @@
         "consistent-return": "off",
         "func-names": "off",
 	      "quote-props": ["error", "consistent-as-needed", { "keywords": true }],
-        "dot-notation": "off"
+        "dot-notation": "off",
+        "comma-dangle": "off",
+        "object-curly-newline": "off",
+        "space-before-function-paren": "off"
       }
     }
   ]

@@ -1,0 +1,42 @@
+{
+  "title": {
+    "en": "Occupancy is"
+  },
+  "titleFormatted": {
+    "en": "Occupancy !{{is|is not}} [[occupancy]]"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=hvac"
+    },
+    {
+      "type": "dropdown",
+      "name": "occupancy",
+      "title": {
+        "en": "Occupancy"
+      },
+      "values": [
+        {
+          "id": "present",
+          "title": {
+            "en": "Present"
+          }
+        },
+        {
+          "id": "coming_home",
+          "title": {
+            "en": "Coming Home"
+          }
+        },
+        {
+          "id": "away",
+          "title": {
+            "en": "Away"
+          }
+        }
+      ]
+    }
+  ]
+}

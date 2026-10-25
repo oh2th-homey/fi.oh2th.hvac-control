@@ -1,0 +1,32 @@
+{
+  "title": {
+    "en": "Boost zone"
+  },
+  "titleFormatted": {
+    "en": "Boost for [[minutes]] minutes"
+  },
+  "hint": {
+    "en": "Turns boost on: heat to comfort plus the boost amount (cooling: comfort), then back to normal. Also sets the zone mode to Auto. Empty time: the boost time from the zone settings."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=zone"
+    },
+    {
+      "type": "number",
+      "name": "minutes",
+      "title": {
+        "en": "Minutes"
+      },
+      "required": false,
+      "min": 1,
+      "max": 1440,
+      "step": 1,
+      "placeholder": {
+        "en": "60"
+      }
+    }
+  ]
+}

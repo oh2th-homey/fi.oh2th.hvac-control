@@ -1,0 +1,24 @@
+{
+  "title": {
+    "en": "Mode changed"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=hvac"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "enum_master_mode",
+      "type": "string",
+      "title": {
+        "en": "Mode"
+      },
+      "example": {
+        "en": "Long absence"
+      }
+    }
+  ]
+}

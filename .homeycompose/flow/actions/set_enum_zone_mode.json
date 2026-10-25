@@ -1,0 +1,45 @@
+{
+  "title": {
+    "en": "Set zone mode"
+  },
+  "titleFormatted": {
+    "en": "Set zone mode to [[mode]]"
+  },
+  "hint": {
+    "en": "Auto, manual or off. Boost is separate: use Boost zone."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=zone"
+    },
+    {
+      "type": "dropdown",
+      "name": "mode",
+      "title": {
+        "en": "Mode"
+      },
+      "values": [
+        {
+          "id": "auto",
+          "title": {
+            "en": "Auto"
+          }
+        },
+        {
+          "id": "manual",
+          "title": {
+            "en": "Manual"
+          }
+        },
+        {
+          "id": "off",
+          "title": {
+            "en": "Off"
+          }
+        }
+      ]
+    }
+  ]
+}

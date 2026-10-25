@@ -1,7 +1,7 @@
 {
   "id": "fi.oh2th.hvac-control",
   "version": "1.0.0",
-  "compatibility": ">=12.4.0",
+  "compatibility": ">=12.11.0",
   "sdk": 3,
   "runtime": "nodejs",
   "platforms": [
@@ -33,7 +33,9 @@
     "en": [
       "heating",
       "thermostat",
-      "energy"
+      "energy",
+      "hvac",
+      "airconditioning"
     ]
   },
   "contributors": {

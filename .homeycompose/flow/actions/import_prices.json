@@ -1,0 +1,49 @@
+{
+  "title": {
+    "en": "Import prices"
+  },
+  "titleFormatted": {
+    "en": "Import [[day]] prices [[prices]]"
+  },
+  "hint": {
+    "en": "Use the price token of your energy price app: a JSON array of one day's quarter-hour (or hourly) prices per kWh, starting at local midnight. Tomorrow's prices may be partial or empty."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=hvac"
+    },
+    {
+      "type": "dropdown",
+      "name": "day",
+      "title": {
+        "en": "Day"
+      },
+      "values": [
+        {
+          "id": "today",
+          "title": {
+            "en": "today's"
+          }
+        },
+        {
+          "id": "tomorrow",
+          "title": {
+            "en": "tomorrow's"
+          }
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "name": "prices",
+      "title": {
+        "en": "Prices"
+      },
+      "placeholder": {
+        "en": "[0.0959,0.0804,…]"
+      }
+    }
+  ]
+}

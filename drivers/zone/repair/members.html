@@ -1,0 +1,166 @@
+<!-- Member picker for repair: a copy of drivers/zone/pair/members.html with REPAIR = true. -->
+<script type="application/javascript">
+  const REPAIR = true;
+</script>
+
+<style>
+  .hz-group { margin-top: 1.2em; font-weight: bold; }
+  .hz-row { border-bottom: 1px solid var(--homey-color-mono-100, #eee); padding: 0.6em 0; }
+  .hz-name { display: block; margin-bottom: 0.3em; }
+  .hz-opts { display: flex; flex-wrap: wrap; gap: 0.4em 1.2em; align-items: center; font-size: 0.9em; }
+  .hz-opts select, .hz-opts input[type="number"] { width: auto; max-width: 7em; }
+  .hz-error { color: var(--homey-color-red-500, #d33); margin: 0.6em 0; }
+  .hz-hint { font-size: 0.85em; opacity: 0.7; }
+</style>
+
+<header class="homey-header">
+  <h1 class="homey-title" data-i18n="pair.members.title"></h1>
+  <p class="homey-subtitle" data-i18n="pair.members.subtitle"></p>
+</header>
+
+<form class="homey-form" onsubmit="return false">
+  <div class="homey-form-group" id="name-group">
+    <label class="homey-form-label" for="zone-name" data-i18n="pair.members.name"></label>
+    <input class="homey-form-input" id="zone-name" type="text" />
+  </div>
+  <p class="hz-hint" data-i18n="pair.members.hint"></p>
+  <div id="list"></div>
+  <p class="hz-error" id="error"></p>
+  <button class="homey-button-primary-full" id="save" data-i18n="pair.members.save"></button>
+</form>
+
+<script type="application/javascript">
+  const list = document.getElementById('list');
+  const errorEl = document.getElementById('error');
+  let candidates = [];
+  let current = {};
+
+  function t(key) {
+    return Homey.__(`pair.members.${key}`);
+  }
+
+  function el(tag, attrs = {}, children = []) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(attrs)) {
+      if (key === 'text') node.textContent = value;
+      else if (key === 'checked' || key === 'disabled') node[key] = value;
+      else node.setAttribute(key, value);
+    }
+    for (const child of children) node.appendChild(child);
+    return node;
+  }
+
+  function select(id, values, selected) {
+    const node = el('select', { id, class: 'homey-form-select' });
+    for (const [value, label] of values) node.appendChild(el('option', { value: String(value), text: label }));
+    node.value = String(selected);
+    return node;
+  }
+
+  function controlKind(device) {
+    if (device.ac) return 'ac';
+    if (device.setpoint) return 'thermostat';
+    if (device.onoff) return 'relay';
+    return null;
+  }
+
+  function render() {
+    list.innerHTML = '';
+    let zone = null;
+    for (const device of candidates) {
+      if (device.zone !== zone) {
+        zone = device.zone;
+        list.appendChild(el('div', { class: 'hz-group', text: zone || '—' }));
+      }
+      const member = current[device.id] || {};
+      const kind = controlKind(device);
+      const opts = el('div', { class: 'hz-opts' });
+
+      if (kind) {
+        opts.appendChild(el('label', {}, [el('input', { type: 'checkbox', id: `c-${device.id}`, checked: !!member.control }), document.createTextNode(` ${t(kind)}`)]));
+      }
+      if (device.temperature || device.humidity) {
+        opts.appendChild(el('label', {}, [el('input', { type: 'checkbox', id: `s-${device.id}`, checked: !!member.sensor }), document.createTextNode(` ${t('sensor')}`)]));
+      }
+      if (kind === 'thermostat' || kind === 'ac') {
+        const step = member.step || (device.options.step >= 1 ? 1 : device.options.step >= 0.5 ? 0.5 : 0.1);
+        opts.appendChild(el('label', { text: `${t('step')} ` }, [select(`step-${device.id}`, [[1, '1'], [0.5, '0.5'], [0.1, '0.1']], step)]));
+        opts.appendChild(el('label', { text: `${t('offset')} ` }, [el('input', { type: 'number', id: `off-${device.id}`, step: '0.5', min: '-5', max: '5', value: String(member.offset || 0) })]));
+      }
+      if (kind === 'ac' && device.options.modes.includes('fan')) {
+        opts.appendChild(el('label', { text: `${t('eco')} ` }, [select(`eco-${device.id}`, [['setback', t('eco_setback')], ['fan', t('eco_fan')]], member.ecoMode || 'setback')]));
+      }
+      if (kind === 'relay') {
+        opts.appendChild(el('label', {}, [el('input', { type: 'checkbox', id: `inv-${device.id}`, checked: !!member.invert }), document.createTextNode(` ${t('invert')}`)]));
+      }
+      list.appendChild(el('div', { class: 'hz-row' }, [el('span', { class: 'hz-name', text: device.name }), opts]));
+    }
+  }
+
+  function collect() {
+    const members = [];
+    for (const device of candidates) {
+      const control = document.getElementById(`c-${device.id}`);
+      const sensor = document.getElementById(`s-${device.id}`);
+      const isControl = !!(control && control.checked);
+      const isSensor = !!(sensor && sensor.checked);
+      if (!isControl && !isSensor) continue;
+      const kind = controlKind(device);
+      const step = document.getElementById(`step-${device.id}`);
+      const offset = document.getElementById(`off-${device.id}`);
+      const eco = document.getElementById(`eco-${device.id}`);
+      const invert = document.getElementById(`inv-${device.id}`);
+      members.push({
+        id: device.id,
+        name: device.name,
+        control: isControl ? kind : null,
+        sensor: isSensor,
+        step: step ? Number(step.value) : null,
+        offset: offset ? Number(offset.value) || 0 : 0,
+        ecoMode: eco ? eco.value : 'setback',
+        invert: !!(invert && invert.checked)
+      });
+    }
+    return members;
+  }
+
+  async function save() {
+    errorEl.textContent = '';
+    const members = collect();
+    try {
+      if (REPAIR) {
+        await Homey.emit('save_members', { members });
+        Homey.done();
+        return;
+      }
+      const name = document.getElementById('zone-name').value.trim() || t('default_name');
+      const device = await Homey.emit('create_zone', { name, members });
+      await Homey.createDevice(device);
+      Homey.done();
+    } catch (error) {
+      errorEl.textContent = error.message || String(error);
+    }
+  }
+
+  document.getElementById('save').addEventListener('click', save);
+  if (REPAIR) document.getElementById('name-group').style.display = 'none';
+
+  Homey.showLoadingOverlay();
+  (async () => {
+    try {
+      if (REPAIR) {
+        const members = await Homey.emit('get_members');
+        current = Object.fromEntries(members.map((member) => [member.id, member]));
+      } else {
+        await Homey.emit('check_controller');
+      }
+      candidates = await Homey.emit('get_candidates');
+      render();
+    } catch (error) {
+      errorEl.textContent = error.message || String(error);
+      document.getElementById('save').disabled = true;
+    } finally {
+      Homey.hideLoadingOverlay();
+    }
+  })();
+</script>

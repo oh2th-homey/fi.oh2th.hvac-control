@@ -1,0 +1,34 @@
+{
+  "title": {
+    "en": "Member write failed"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=zone"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "member",
+      "type": "string",
+      "title": {
+        "en": "Member"
+      },
+      "example": {
+        "en": "Floor thermostat"
+      }
+    },
+    {
+      "name": "reason",
+      "type": "string",
+      "title": {
+        "en": "Reason"
+      },
+      "example": {
+        "en": "Reported 4.0 after writing 21"
+      }
+    }
+  ]
+}

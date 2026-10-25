@@ -1,0 +1,19 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Eco"
+  },
+  "hint": {
+    "en": "The zone aims at eco (comfort minus setback, or plus setback when cooling)."
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": true,
+  "insightsTitleTrue": {
+    "en": "Eco started"
+  },
+  "insightsTitleFalse": {
+    "en": "Eco ended"
+  }
+}

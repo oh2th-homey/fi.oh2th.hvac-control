@@ -1,0 +1,45 @@
+{
+  "title": {
+    "en": "Set occupancy"
+  },
+  "titleFormatted": {
+    "en": "Set occupancy to [[occupancy]]"
+  },
+  "hint": {
+    "en": "Present: someone is home. Coming Home: someone is on the way home. Away: nobody is home. Use any presence source you like, such as presence, geofence or a switch."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=hvac"
+    },
+    {
+      "type": "dropdown",
+      "name": "occupancy",
+      "title": {
+        "en": "Occupancy"
+      },
+      "values": [
+        {
+          "id": "present",
+          "title": {
+            "en": "Present"
+          }
+        },
+        {
+          "id": "coming_home",
+          "title": {
+            "en": "Coming Home"
+          }
+        },
+        {
+          "id": "away",
+          "title": {
+            "en": "Away"
+          }
+        }
+      ]
+    }
+  ]
+}

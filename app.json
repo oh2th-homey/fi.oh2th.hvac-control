@@ -2,7 +2,7 @@
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "fi.oh2th.hvac-control",
   "version": "1.0.0",
-  "compatibility": ">=12.4.0",
+  "compatibility": ">=12.11.0",
   "sdk": 3,
   "runtime": "nodejs",
   "platforms": [
@@ -34,7 +34,9 @@
     "en": [
       "heating",
       "thermostat",
-      "energy"
+      "energy",
+      "hvac",
+      "airconditioning"
     ]
   },
   "contributors": {
@@ -59,5 +61,1508 @@
     "url": "https://github.com/oh2th-homey/fi.oh2th.hvac-control/issues"
   },
   "support": "https://github.com/oh2th-homey/fi.oh2th.hvac-control/discussions/categories/general",
-  "homepage": "https://oh2th.fi/tapio/homey/"
+  "homepage": "https://oh2th.fi/tapio/homey/",
+  "flow": {
+    "triggers": [
+      {
+        "title": {
+          "en": "Mode changed"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "enum_master_mode",
+            "type": "string",
+            "title": {
+              "en": "Mode"
+            },
+            "example": {
+              "en": "Long absence"
+            }
+          }
+        ],
+        "id": "enum_master_mode_changed"
+      },
+      {
+        "title": {
+          "en": "Occupancy changed"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "enum_occupancy",
+            "type": "string",
+            "title": {
+              "en": "Occupancy"
+            },
+            "example": {
+              "en": "Away"
+            }
+          }
+        ],
+        "id": "enum_occupancy_changed"
+      },
+      {
+        "title": {
+          "en": "Eco changed"
+        },
+        "hint": {
+          "en": "Use it to run other actions when the zone enters or leaves eco, for example an air conditioner's own fan mode."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=zone"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "is_eco",
+            "type": "boolean",
+            "title": {
+              "en": "Eco"
+            },
+            "example": true
+          }
+        ],
+        "id": "is_eco_changed"
+      },
+      {
+        "title": {
+          "en": "Expensive now changed"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "is_expensive",
+            "type": "boolean",
+            "title": {
+              "en": "Expensive now"
+            },
+            "example": true
+          }
+        ],
+        "id": "is_expensive_changed"
+      },
+      {
+        "title": {
+          "en": "Target changed"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=zone"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "measure_temperature_set_target",
+            "type": "number",
+            "title": {
+              "en": "Target"
+            },
+            "example": 21
+          },
+          {
+            "name": "text_reason",
+            "type": "string",
+            "title": {
+              "en": "Reason"
+            },
+            "example": {
+              "en": "Away: eco"
+            }
+          }
+        ],
+        "id": "measure_temperature_set_target_changed"
+      },
+      {
+        "title": {
+          "en": "Member write failed"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=zone"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "member",
+            "type": "string",
+            "title": {
+              "en": "Member"
+            },
+            "example": {
+              "en": "Floor thermostat"
+            }
+          },
+          {
+            "name": "reason",
+            "type": "string",
+            "title": {
+              "en": "Reason"
+            },
+            "example": {
+              "en": "Reported 4.0 after writing 21"
+            }
+          }
+        ],
+        "id": "member_write_failed"
+      },
+      {
+        "title": {
+          "en": "Prices imported"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "day",
+            "type": "string",
+            "title": {
+              "en": "Day"
+            },
+            "example": {
+              "en": "tomorrow"
+            }
+          },
+          {
+            "name": "count",
+            "type": "number",
+            "title": {
+              "en": "Number of prices"
+            },
+            "example": 96
+          }
+        ],
+        "id": "prices_imported"
+      },
+      {
+        "title": {
+          "en": "Prices missing for tomorrow"
+        },
+        "hint": {
+          "en": "Runs once a day at the check time set in the HVAC Controller settings, when tomorrow's prices are still missing or partial."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "count",
+            "type": "number",
+            "title": {
+              "en": "Number of prices"
+            },
+            "example": 0
+          }
+        ],
+        "id": "prices_missing_tomorrow"
+      },
+      {
+        "title": {
+          "en": "Season changed"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "thermostat_mode",
+            "type": "string",
+            "title": {
+              "en": "Season"
+            },
+            "example": {
+              "en": "Heating"
+            }
+          }
+        ],
+        "id": "thermostat_mode_changed"
+      }
+    ],
+    "conditions": [
+      {
+        "title": {
+          "en": "Occupancy is"
+        },
+        "titleFormatted": {
+          "en": "Occupancy !{{is|is not}} [[occupancy]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          },
+          {
+            "type": "dropdown",
+            "name": "occupancy",
+            "title": {
+              "en": "Occupancy"
+            },
+            "values": [
+              {
+                "id": "present",
+                "title": {
+                  "en": "Present"
+                }
+              },
+              {
+                "id": "coming_home",
+                "title": {
+                  "en": "Coming Home"
+                }
+              },
+              {
+                "id": "away",
+                "title": {
+                  "en": "Away"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "enum_occupancy_is"
+      },
+      {
+        "title": {
+          "en": "Zone mode is"
+        },
+        "titleFormatted": {
+          "en": "Zone mode !{{is|is not}} [[mode]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=zone"
+          },
+          {
+            "type": "dropdown",
+            "name": "mode",
+            "title": {
+              "en": "Mode"
+            },
+            "values": [
+              {
+                "id": "auto",
+                "title": {
+                  "en": "Auto"
+                }
+              },
+              {
+                "id": "manual",
+                "title": {
+                  "en": "Manual"
+                }
+              },
+              {
+                "id": "off",
+                "title": {
+                  "en": "Off"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "enum_zone_mode_is"
+      },
+      {
+        "title": {
+          "en": "Zone is in eco"
+        },
+        "titleFormatted": {
+          "en": "Zone !{{is|is not}} in eco"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=zone"
+          }
+        ],
+        "id": "is_eco"
+      },
+      {
+        "title": {
+          "en": "Price is expensive"
+        },
+        "titleFormatted": {
+          "en": "Price !{{is|is not}} expensive now"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          }
+        ],
+        "id": "is_expensive"
+      },
+      {
+        "title": {
+          "en": "Season is"
+        },
+        "titleFormatted": {
+          "en": "Season !{{is|is not}} [[season]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          },
+          {
+            "type": "dropdown",
+            "name": "season",
+            "title": {
+              "en": "Season"
+            },
+            "values": [
+              {
+                "id": "heat",
+                "title": {
+                  "en": "Heating"
+                }
+              },
+              {
+                "id": "cool",
+                "title": {
+                  "en": "Cooling"
+                }
+              },
+              {
+                "id": "off",
+                "title": {
+                  "en": "Off"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "thermostat_mode_is"
+      }
+    ],
+    "actions": [
+      {
+        "title": {
+          "en": "Import prices"
+        },
+        "titleFormatted": {
+          "en": "Import [[day]] prices [[prices]]"
+        },
+        "hint": {
+          "en": "Use the price token of your energy price app: a JSON array of one day's quarter-hour (or hourly) prices per kWh, starting at local midnight. Tomorrow's prices may be partial or empty."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          },
+          {
+            "type": "dropdown",
+            "name": "day",
+            "title": {
+              "en": "Day"
+            },
+            "values": [
+              {
+                "id": "today",
+                "title": {
+                  "en": "today's"
+                }
+              },
+              {
+                "id": "tomorrow",
+                "title": {
+                  "en": "tomorrow's"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "name": "prices",
+            "title": {
+              "en": "Prices"
+            },
+            "placeholder": {
+              "en": "[0.0959,0.0804,…]"
+            }
+          }
+        ],
+        "id": "import_prices"
+      },
+      {
+        "title": {
+          "en": "Set long absence until"
+        },
+        "titleFormatted": {
+          "en": "Set long absence until [[date]]"
+        },
+        "hint": {
+          "en": "Everyone is away for days. Starts now: zones keep frost protection only and stop cooling, and return to auto after the given day."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          },
+          {
+            "type": "date",
+            "name": "date",
+            "title": {
+              "en": "Last day of absence"
+            }
+          }
+        ],
+        "id": "set_absence_until"
+      },
+      {
+        "title": {
+          "en": "Set mode"
+        },
+        "titleFormatted": {
+          "en": "Set mode to [[mode]]"
+        },
+        "hint": {
+          "en": "Auto, long absence or off for all zones. Setting auto also ends a long absence."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          },
+          {
+            "type": "dropdown",
+            "name": "mode",
+            "title": {
+              "en": "Mode"
+            },
+            "values": [
+              {
+                "id": "auto",
+                "title": {
+                  "en": "Auto"
+                }
+              },
+              {
+                "id": "long_absence",
+                "title": {
+                  "en": "Long absence"
+                }
+              },
+              {
+                "id": "off",
+                "title": {
+                  "en": "Off"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "set_enum_master_mode"
+      },
+      {
+        "title": {
+          "en": "Set occupancy"
+        },
+        "titleFormatted": {
+          "en": "Set occupancy to [[occupancy]]"
+        },
+        "hint": {
+          "en": "Present: someone is home. Coming Home: someone is on the way home. Away: nobody is home. Use any presence source you like, such as presence, geofence or a switch."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          },
+          {
+            "type": "dropdown",
+            "name": "occupancy",
+            "title": {
+              "en": "Occupancy"
+            },
+            "values": [
+              {
+                "id": "present",
+                "title": {
+                  "en": "Present"
+                }
+              },
+              {
+                "id": "coming_home",
+                "title": {
+                  "en": "Coming Home"
+                }
+              },
+              {
+                "id": "away",
+                "title": {
+                  "en": "Away"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "set_enum_occupancy"
+      },
+      {
+        "title": {
+          "en": "Set zone mode"
+        },
+        "titleFormatted": {
+          "en": "Set zone mode to [[mode]]"
+        },
+        "hint": {
+          "en": "Auto, manual or off. Boost is separate: use Boost zone."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=zone"
+          },
+          {
+            "type": "dropdown",
+            "name": "mode",
+            "title": {
+              "en": "Mode"
+            },
+            "values": [
+              {
+                "id": "auto",
+                "title": {
+                  "en": "Auto"
+                }
+              },
+              {
+                "id": "manual",
+                "title": {
+                  "en": "Manual"
+                }
+              },
+              {
+                "id": "off",
+                "title": {
+                  "en": "Off"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "set_enum_zone_mode"
+      },
+      {
+        "title": {
+          "en": "Set setback"
+        },
+        "titleFormatted": {
+          "en": "Set setback to [[setback]] °C"
+        },
+        "hint": {
+          "en": "Eco drop from comfort, 0 to 5 °C in whole degrees. 0: no eco."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=zone"
+          },
+          {
+            "type": "number",
+            "name": "setback",
+            "title": {
+              "en": "Setback"
+            },
+            "min": 0,
+            "max": 5,
+            "step": 1
+          }
+        ],
+        "id": "set_num_setback"
+      },
+      {
+        "title": {
+          "en": "Boost zone"
+        },
+        "titleFormatted": {
+          "en": "Boost for [[minutes]] minutes"
+        },
+        "hint": {
+          "en": "Turns boost on: heat to comfort plus the boost amount (cooling: comfort), then back to normal. Also sets the zone mode to Auto. Empty time: the boost time from the zone settings."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=zone"
+          },
+          {
+            "type": "number",
+            "name": "minutes",
+            "title": {
+              "en": "Minutes"
+            },
+            "required": false,
+            "min": 1,
+            "max": 1440,
+            "step": 1,
+            "placeholder": {
+              "en": "60"
+            }
+          }
+        ],
+        "id": "set_power_boost"
+      },
+      {
+        "title": {
+          "en": "Set price model"
+        },
+        "titleFormatted": {
+          "en": "Set price model to [[model]] with [[pct]] %"
+        },
+        "hint": {
+          "en": "Rate is highest flags short price peaks and needs 15-minute prices. Above average flags prices the given percentage above today's average. The percentage is only used by Above average."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          },
+          {
+            "type": "dropdown",
+            "name": "model",
+            "title": {
+              "en": "Price model"
+            },
+            "values": [
+              {
+                "id": "rate_is_highest",
+                "title": {
+                  "en": "Rate is highest"
+                }
+              },
+              {
+                "id": "above_average",
+                "title": {
+                  "en": "Above average"
+                }
+              },
+              {
+                "id": "off",
+                "title": {
+                  "en": "Off"
+                }
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "name": "pct",
+            "title": {
+              "en": "Percentage"
+            },
+            "required": false,
+            "min": 0,
+            "max": 500,
+            "step": 1,
+            "placeholder": {
+              "en": "30"
+            }
+          }
+        ],
+        "id": "set_price_model"
+      },
+      {
+        "title": {
+          "en": "Set comfort cool"
+        },
+        "titleFormatted": {
+          "en": "Set comfort cool to [[temperature]] °C"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=zone"
+          },
+          {
+            "type": "number",
+            "name": "temperature",
+            "title": {
+              "en": "Temperature"
+            },
+            "min": 16,
+            "max": 32,
+            "step": 0.5
+          }
+        ],
+        "id": "set_target_temperature_cool"
+      },
+      {
+        "title": {
+          "en": "Set comfort heat"
+        },
+        "titleFormatted": {
+          "en": "Set comfort heat to [[temperature]] °C"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=zone"
+          },
+          {
+            "type": "number",
+            "name": "temperature",
+            "title": {
+              "en": "Temperature"
+            },
+            "min": 5,
+            "max": 30,
+            "step": 0.5
+          }
+        ],
+        "id": "set_target_temperature_heat"
+      },
+      {
+        "title": {
+          "en": "Set season"
+        },
+        "titleFormatted": {
+          "en": "Set season to [[season]]"
+        },
+        "hint": {
+          "en": "Heating, cooling or off."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          },
+          {
+            "type": "dropdown",
+            "name": "season",
+            "title": {
+              "en": "Season"
+            },
+            "values": [
+              {
+                "id": "heat",
+                "title": {
+                  "en": "Heating"
+                }
+              },
+              {
+                "id": "cool",
+                "title": {
+                  "en": "Cooling"
+                }
+              },
+              {
+                "id": "off",
+                "title": {
+                  "en": "Off"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "set_thermostat_mode"
+      }
+    ]
+  },
+  "drivers": [
+    {
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [],
+      "images": {
+        "small": "/drivers/hvac/assets/images/small.png",
+        "large": "/drivers/hvac/assets/images/large.png"
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "name": {
+        "en": "HVAC Controller"
+      },
+      "class": "other",
+      "capabilities": [
+        "enum_occupancy",
+        "thermostat_mode",
+        "enum_master_mode",
+        "is_expensive",
+        "measure_monetary",
+        "text_prices_until",
+        "text_reason"
+      ],
+      "capabilitiesOptions": {
+        "thermostat_mode": {
+          "title": {
+            "en": "Season"
+          },
+          "values": [
+            {
+              "id": "heat",
+              "title": {
+                "en": "Heating"
+              }
+            },
+            {
+              "id": "cool",
+              "title": {
+                "en": "Cooling"
+              }
+            },
+            {
+              "id": "off",
+              "title": {
+                "en": "Off"
+              }
+            }
+          ]
+        },
+        "measure_monetary": {
+          "title": {
+            "en": "Price now"
+          },
+          "units": {
+            "en": "/kWh"
+          },
+          "decimals": 4,
+          "insights": true
+        }
+      },
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Prices"
+          },
+          "children": [
+            {
+              "id": "price_model",
+              "type": "dropdown",
+              "label": {
+                "en": "Price model"
+              },
+              "value": "rate_is_highest",
+              "hint": {
+                "en": "When the price counts as expensive. Rate is highest: short local price peaks (needs 15-minute prices; with hourly prices Above average is used). Above average: the percentage below above today's average. Off: occupancy alone decides."
+              },
+              "values": [
+                {
+                  "id": "rate_is_highest",
+                  "label": {
+                    "en": "Rate is highest"
+                  }
+                },
+                {
+                  "id": "above_average",
+                  "label": {
+                    "en": "Above average"
+                  }
+                },
+                {
+                  "id": "off",
+                  "label": {
+                    "en": "Off"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "price_above_average_pct",
+              "type": "number",
+              "label": {
+                "en": "Above average by"
+              },
+              "value": 30,
+              "min": 0,
+              "max": 500,
+              "step": 1,
+              "units": {
+                "en": "%"
+              },
+              "hint": {
+                "en": "Used by the Above average model."
+              }
+            },
+            {
+              "id": "price_min_delta",
+              "type": "number",
+              "label": {
+                "en": "Minimum price difference"
+              },
+              "value": 0.005,
+              "min": 0,
+              "max": 1,
+              "step": 0.001,
+              "units": {
+                "en": "/kWh"
+              },
+              "hint": {
+                "en": "A price must be at least this much above the average or median to count as expensive, so cheap and flat days are not flagged for fractions of a cent."
+              }
+            },
+            {
+              "id": "price_resolution",
+              "type": "dropdown",
+              "label": {
+                "en": "Price resolution"
+              },
+              "value": "15",
+              "hint": {
+                "en": "Length of one price slot in the imported prices."
+              },
+              "values": [
+                {
+                  "id": "15",
+                  "label": {
+                    "en": "15 minutes"
+                  }
+                },
+                {
+                  "id": "60",
+                  "label": {
+                    "en": "60 minutes"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "tomorrow_check_time",
+              "type": "text",
+              "label": {
+                "en": "Check tomorrow's prices at"
+              },
+              "value": "15:00",
+              "hint": {
+                "en": "Local time (HH:mm) of the daily check. The trigger Prices missing for tomorrow runs when tomorrow's prices are still missing or partial."
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Long absence"
+          },
+          "children": [
+            {
+              "id": "absence_until",
+              "type": "text",
+              "label": {
+                "en": "Long absence until"
+              },
+              "value": "",
+              "hint": {
+                "en": "Last day of a long absence (everyone away for days) as YYYY-MM-DD. While set, the mode is Long absence: frost protection only, no cooling. After this day it returns to Auto. Empty: no end date."
+              }
+            }
+          ]
+        }
+      ],
+      "id": "hvac"
+    },
+    {
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [],
+      "images": {
+        "small": "/drivers/zone/assets/images/small.png",
+        "large": "/drivers/zone/assets/images/large.png"
+      },
+      "name": {
+        "en": "Heating Zone"
+      },
+      "class": "thermostat",
+      "capabilities": [
+        "target_temperature",
+        "target_temperature.heat",
+        "target_temperature.cool",
+        "num_setback",
+        "measure_temperature.set_target",
+        "measure_temperature",
+        "measure_humidity",
+        "enum_zone_mode",
+        "power_boost",
+        "is_eco",
+        "text_reason",
+        "alarm_problem"
+      ],
+      "capabilitiesOptions": {
+        "target_temperature": {
+          "title": {
+            "en": "Comfort"
+          },
+          "min": 5,
+          "max": 32,
+          "step": 0.5,
+          "decimals": 1
+        },
+        "target_temperature.heat": {
+          "title": {
+            "en": "Comfort heat"
+          },
+          "min": 5,
+          "max": 30,
+          "step": 0.5,
+          "decimals": 1
+        },
+        "target_temperature.cool": {
+          "title": {
+            "en": "Comfort cool"
+          },
+          "min": 16,
+          "max": 32,
+          "step": 0.5,
+          "decimals": 1
+        },
+        "alarm_problem": {
+          "title": {
+            "en": "Zone problem"
+          }
+        },
+        "power_boost": {
+          "title": {
+            "en": "Boost"
+          }
+        },
+        "measure_temperature.set_target": {
+          "title": {
+            "en": "Target now"
+          },
+          "decimals": 1
+        }
+      },
+      "pair": [
+        {
+          "id": "members"
+        }
+      ],
+      "repair": [
+        {
+          "id": "members"
+        }
+      ],
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Zone"
+          },
+          "children": [
+            {
+              "id": "occupancy_rule",
+              "type": "dropdown",
+              "label": {
+                "en": "Occupancy"
+              },
+              "value": "follows",
+              "hint": {
+                "en": "Follows home: comfort when someone is home or coming home. Always eco: eco until boosted, for example a guest room."
+              },
+              "values": [
+                {
+                  "id": "follows",
+                  "label": {
+                    "en": "Follows home"
+                  }
+                },
+                {
+                  "id": "always_eco",
+                  "label": {
+                    "en": "Always eco"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "frost_floor",
+              "type": "number",
+              "label": {
+                "en": "Frost protection"
+              },
+              "value": 8,
+              "min": 5,
+              "max": 15,
+              "step": 0.5,
+              "units": {
+                "en": "°C"
+              },
+              "hint": {
+                "en": "Never heat below this, also in long absence, off and manual."
+              }
+            },
+            {
+              "id": "boost_delta",
+              "type": "number",
+              "label": {
+                "en": "Boost amount"
+              },
+              "value": 1,
+              "min": 0,
+              "max": 5,
+              "step": 0.5,
+              "units": {
+                "en": "°C"
+              },
+              "hint": {
+                "en": "Boost heats to comfort plus this. When cooling, boost uses comfort."
+              }
+            },
+            {
+              "id": "boost_minutes",
+              "type": "number",
+              "label": {
+                "en": "Boost time"
+              },
+              "value": 60,
+              "min": 5,
+              "max": 720,
+              "step": 5,
+              "units": {
+                "en": "min"
+              },
+              "hint": {
+                "en": "How long boost lasts when started from the device or without a time."
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Members"
+          },
+          "children": [
+            {
+              "id": "hold_minutes",
+              "type": "number",
+              "label": {
+                "en": "Minimum hold time"
+              },
+              "value": 30,
+              "min": 0,
+              "max": 240,
+              "step": 5,
+              "units": {
+                "en": "min"
+              },
+              "hint": {
+                "en": "A price change waits at least this long after the last write to a member. Occupancy, mode and setpoint changes are written at once."
+              }
+            },
+            {
+              "id": "hysteresis",
+              "type": "number",
+              "label": {
+                "en": "Setpoint hysteresis"
+              },
+              "value": 0.2,
+              "min": 0,
+              "max": 1,
+              "step": 0.1,
+              "units": {
+                "en": "°C"
+              },
+              "hint": {
+                "en": "A thermostat moves to the next step only when the target passes the midpoint by this much."
+              }
+            },
+            {
+              "id": "relay_hysteresis",
+              "type": "number",
+              "label": {
+                "en": "Relay hysteresis"
+              },
+              "value": 0.3,
+              "min": 0.1,
+              "max": 2,
+              "step": 0.1,
+              "units": {
+                "en": "°C"
+              },
+              "hint": {
+                "en": "On/off relays switch on below target minus this and off above target plus this."
+              }
+            },
+            {
+              "id": "relay_min_minutes",
+              "type": "number",
+              "label": {
+                "en": "Relay minimum on and off time"
+              },
+              "value": 5,
+              "min": 0,
+              "max": 60,
+              "step": 1,
+              "units": {
+                "en": "min"
+              },
+              "hint": {
+                "en": "Protects relays and heaters from rapid switching."
+              }
+            },
+            {
+              "id": "sensor_stale_minutes",
+              "type": "number",
+              "label": {
+                "en": "Sensor timeout"
+              },
+              "value": 120,
+              "min": 10,
+              "max": 1440,
+              "step": 10,
+              "units": {
+                "en": "min"
+              },
+              "hint": {
+                "en": "A climate sensor reading older than this is ignored."
+              }
+            }
+          ]
+        }
+      ],
+      "id": "zone"
+    }
+  ],
+  "capabilities": {
+    "enum_master_mode": {
+      "type": "enum",
+      "title": {
+        "en": "Mode"
+      },
+      "hint": {
+        "en": "Auto: zones follow occupancy and prices. Long absence: everyone away for days, frost protection only, no cooling. Off: zones stop controlling, frost protection only."
+      },
+      "values": [
+        {
+          "id": "auto",
+          "title": {
+            "en": "Auto"
+          }
+        },
+        {
+          "id": "long_absence",
+          "title": {
+            "en": "Long absence"
+          }
+        },
+        {
+          "id": "off",
+          "title": {
+            "en": "Off"
+          }
+        }
+      ],
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker"
+    },
+    "enum_occupancy": {
+      "type": "enum",
+      "title": {
+        "en": "Occupancy"
+      },
+      "hint": {
+        "en": "Present: someone is home. Coming Home: someone is on the way home. Away: nobody is home. Set it from your own presence source with the Set occupancy card. Present and Coming Home aim at comfort, Away at eco."
+      },
+      "values": [
+        {
+          "id": "present",
+          "title": {
+            "en": "Present"
+          }
+        },
+        {
+          "id": "coming_home",
+          "title": {
+            "en": "Coming Home"
+          }
+        },
+        {
+          "id": "away",
+          "title": {
+            "en": "Away"
+          }
+        }
+      ],
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker"
+    },
+    "enum_zone_mode": {
+      "type": "enum",
+      "title": {
+        "en": "Zone mode"
+      },
+      "hint": {
+        "en": "Auto: the app sets the members. Manual: hands off, you control the members (frost protection stays on). Off: frost protection only. Boost is a separate switch."
+      },
+      "values": [
+        {
+          "id": "auto",
+          "title": {
+            "en": "Auto"
+          }
+        },
+        {
+          "id": "manual",
+          "title": {
+            "en": "Manual"
+          }
+        },
+        {
+          "id": "off",
+          "title": {
+            "en": "Off"
+          }
+        }
+      ],
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker"
+    },
+    "is_eco": {
+      "type": "boolean",
+      "title": {
+        "en": "Eco"
+      },
+      "hint": {
+        "en": "The zone aims at eco (comfort minus setback, or plus setback when cooling)."
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "insightsTitleTrue": {
+        "en": "Eco started"
+      },
+      "insightsTitleFalse": {
+        "en": "Eco ended"
+      }
+    },
+    "is_expensive": {
+      "type": "boolean",
+      "title": {
+        "en": "Expensive now"
+      },
+      "hint": {
+        "en": "The current price is expensive by the chosen price model."
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "insightsTitleTrue": {
+        "en": "Price became expensive"
+      },
+      "insightsTitleFalse": {
+        "en": "Price became normal"
+      }
+    },
+    "num_setback": {
+      "type": "number",
+      "title": {
+        "en": "Setback"
+      },
+      "hint": {
+        "en": "Eco drop from the comfort setpoint, used when nobody is home or the price is expensive. Heating: comfort minus setback. Cooling: comfort plus setback. 0: no eco."
+      },
+      "units": {
+        "en": "°C"
+      },
+      "min": 0,
+      "max": 5,
+      "step": 1,
+      "decimals": 0,
+      "getable": true,
+      "setable": true,
+      "uiComponent": "slider",
+      "insights": true
+    },
+    "text_prices_until": {
+      "type": "string",
+      "title": {
+        "en": "Prices until"
+      },
+      "hint": {
+        "en": "Prices are known up to this local time."
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    },
+    "text_reason": {
+      "type": "string",
+      "title": {
+        "en": "Reason"
+      },
+      "hint": {
+        "en": "Why the app made its latest decision."
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor"
+    }
+  }
 }

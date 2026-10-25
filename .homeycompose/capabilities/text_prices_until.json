@@ -1,0 +1,12 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Prices until"
+  },
+  "hint": {
+    "en": "Prices are known up to this local time."
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor"
+}

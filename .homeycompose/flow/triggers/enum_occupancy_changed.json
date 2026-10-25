@@ -1,0 +1,24 @@
+{
+  "title": {
+    "en": "Occupancy changed"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=hvac"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "enum_occupancy",
+      "type": "string",
+      "title": {
+        "en": "Occupancy"
+      },
+      "example": {
+        "en": "Away"
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Reason"
+  },
+  "hint": {
+    "en": "Why the app made its latest decision."
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor"
+}

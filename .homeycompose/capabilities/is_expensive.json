@@ -1,0 +1,19 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Expensive now"
+  },
+  "hint": {
+    "en": "The current price is expensive by the chosen price model."
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": true,
+  "insightsTitleTrue": {
+    "en": "Price became expensive"
+  },
+  "insightsTitleFalse": {
+    "en": "Price became normal"
+  }
+}

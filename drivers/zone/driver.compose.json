@@ -1,0 +1,257 @@
+{
+  "name": {
+    "en": "Heating Zone"
+  },
+  "class": "thermostat",
+  "capabilities": [
+    "target_temperature",
+    "target_temperature.heat",
+    "target_temperature.cool",
+    "num_setback",
+    "measure_temperature.set_target",
+    "measure_temperature",
+    "measure_humidity",
+    "enum_zone_mode",
+    "power_boost",
+    "is_eco",
+    "text_reason",
+    "alarm_problem"
+  ],
+  "capabilitiesOptions": {
+    "target_temperature": {
+      "title": {
+        "en": "Comfort"
+      },
+      "min": 5,
+      "max": 32,
+      "step": 0.5,
+      "decimals": 1
+    },
+    "target_temperature.heat": {
+      "title": {
+        "en": "Comfort heat"
+      },
+      "min": 5,
+      "max": 30,
+      "step": 0.5,
+      "decimals": 1
+    },
+    "target_temperature.cool": {
+      "title": {
+        "en": "Comfort cool"
+      },
+      "min": 16,
+      "max": 32,
+      "step": 0.5,
+      "decimals": 1
+    },
+    "alarm_problem": {
+      "title": {
+        "en": "Zone problem"
+      }
+    },
+    "power_boost": {
+      "title": {
+        "en": "Boost"
+      }
+    },
+    "measure_temperature.set_target": {
+      "title": {
+        "en": "Target now"
+      },
+      "decimals": 1
+    }
+  },
+  "$extends": [
+    "device"
+  ],
+  "pair": [
+    {
+      "id": "members"
+    }
+  ],
+  "repair": [
+    {
+      "id": "members"
+    }
+  ],
+  "settings": [
+    {
+      "type": "group",
+      "label": {
+        "en": "Zone"
+      },
+      "children": [
+        {
+          "id": "occupancy_rule",
+          "type": "dropdown",
+          "label": {
+            "en": "Occupancy"
+          },
+          "value": "follows",
+          "hint": {
+            "en": "Follows home: comfort when someone is home or coming home. Always eco: eco until boosted, for example a guest room."
+          },
+          "values": [
+            {
+              "id": "follows",
+              "label": {
+                "en": "Follows home"
+              }
+            },
+            {
+              "id": "always_eco",
+              "label": {
+                "en": "Always eco"
+              }
+            }
+          ]
+        },
+        {
+          "id": "frost_floor",
+          "type": "number",
+          "label": {
+            "en": "Frost protection"
+          },
+          "value": 8,
+          "min": 5,
+          "max": 15,
+          "step": 0.5,
+          "units": {
+            "en": "°C"
+          },
+          "hint": {
+            "en": "Never heat below this, also in long absence, off and manual."
+          }
+        },
+        {
+          "id": "boost_delta",
+          "type": "number",
+          "label": {
+            "en": "Boost amount"
+          },
+          "value": 1,
+          "min": 0,
+          "max": 5,
+          "step": 0.5,
+          "units": {
+            "en": "°C"
+          },
+          "hint": {
+            "en": "Boost heats to comfort plus this. When cooling, boost uses comfort."
+          }
+        },
+        {
+          "id": "boost_minutes",
+          "type": "number",
+          "label": {
+            "en": "Boost time"
+          },
+          "value": 60,
+          "min": 5,
+          "max": 720,
+          "step": 5,
+          "units": {
+            "en": "min"
+          },
+          "hint": {
+            "en": "How long boost lasts when started from the device or without a time."
+          }
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": {
+        "en": "Members"
+      },
+      "children": [
+        {
+          "id": "hold_minutes",
+          "type": "number",
+          "label": {
+            "en": "Minimum hold time"
+          },
+          "value": 30,
+          "min": 0,
+          "max": 240,
+          "step": 5,
+          "units": {
+            "en": "min"
+          },
+          "hint": {
+            "en": "A price change waits at least this long after the last write to a member. Occupancy, mode and setpoint changes are written at once."
+          }
+        },
+        {
+          "id": "hysteresis",
+          "type": "number",
+          "label": {
+            "en": "Setpoint hysteresis"
+          },
+          "value": 0.2,
+          "min": 0,
+          "max": 1,
+          "step": 0.1,
+          "units": {
+            "en": "°C"
+          },
+          "hint": {
+            "en": "A thermostat moves to the next step only when the target passes the midpoint by this much."
+          }
+        },
+        {
+          "id": "relay_hysteresis",
+          "type": "number",
+          "label": {
+            "en": "Relay hysteresis"
+          },
+          "value": 0.3,
+          "min": 0.1,
+          "max": 2,
+          "step": 0.1,
+          "units": {
+            "en": "°C"
+          },
+          "hint": {
+            "en": "On/off relays switch on below target minus this and off above target plus this."
+          }
+        },
+        {
+          "id": "relay_min_minutes",
+          "type": "number",
+          "label": {
+            "en": "Relay minimum on and off time"
+          },
+          "value": 5,
+          "min": 0,
+          "max": 60,
+          "step": 1,
+          "units": {
+            "en": "min"
+          },
+          "hint": {
+            "en": "Protects relays and heaters from rapid switching."
+          }
+        },
+        {
+          "id": "sensor_stale_minutes",
+          "type": "number",
+          "label": {
+            "en": "Sensor timeout"
+          },
+          "value": 120,
+          "min": 10,
+          "max": 1440,
+          "step": 10,
+          "units": {
+            "en": "min"
+          },
+          "hint": {
+            "en": "A climate sensor reading older than this is ignored."
+          }
+        }
+      ]
+    }
+  ]
+}

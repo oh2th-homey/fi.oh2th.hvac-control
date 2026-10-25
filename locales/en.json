@@ -1,1 +1,105 @@
-{}
+{
+  "device": {
+    "initializing": "Initializing…"
+  },
+  "pair": {
+    "hvac_name": "HVAC Controller",
+    "hvac_exists": "The HVAC Controller has already been added. One is enough for the whole home.",
+    "members": {
+      "title": "Zone members",
+      "subtitle": "Choose the devices this zone controls and the sensors it measures with.",
+      "name": "Zone name",
+      "default_name": "Heating Zone",
+      "hint": "Thermostats and air conditioners get a setpoint, relays and plugs are switched on and off. Step: the setpoint step the device really accepts. Offset: added to the zone target for this device.",
+      "thermostat": "Thermostat",
+      "ac": "Air conditioner",
+      "relay": "On/off relay",
+      "sensor": "Climate sensor",
+      "step": "Step",
+      "offset": "Offset °C",
+      "eco": "Eco",
+      "eco_setback": "Setback",
+      "eco_fan": "Fan mode",
+      "invert": "Inverted (off = heating)",
+      "save": "Save",
+      "error_no_control": "Choose at least one thermostat, air conditioner or relay to control.",
+      "error_relay_sensor": "A zone with relays needs at least one temperature sensor."
+    }
+  },
+  "error": {
+    "no_controller": "Add the HVAC Controller first",
+    "invalid_value": "Invalid value: __value__",
+    "invalid_date": "Enter the date as YYYY-MM-DD",
+    "invalid_time": "Enter the time as HH:mm, for example 15:00",
+    "date_in_past": "The last day of the long absence is already in the past"
+  },
+  "occupancy": {
+    "present": "Present",
+    "coming_home": "Coming Home",
+    "away": "Away"
+  },
+  "season": {
+    "heating": "Heating",
+    "cooling": "Cooling",
+    "off": "Off"
+  },
+  "master_mode": {
+    "auto": "Auto",
+    "long_absence": "Long absence",
+    "off": "Off"
+  },
+  "price": {
+    "none": "No prices",
+    "off": "Price model off",
+    "unknown": "No price for now",
+    "hourly_fallback": "Rate is highest needs 15-minute prices, using above average",
+    "peak": "Expensive: __price__ is a short price peak (threshold __threshold__)",
+    "not_peak": "Normal: __price__ is not a short price peak (threshold __threshold__)",
+    "above_average": "Expensive: __price__ is more than __pct__ % above today's average __average__",
+    "not_above_average": "Normal: __price__ is not more than __pct__ % above today's average __average__"
+  },
+  "import": {
+    "today": "today's",
+    "tomorrow": "tomorrow's",
+    "rejected": "Prices rejected, kept the previous ones: __day__ prices __detail__",
+    "not_json": "are not valid JSON",
+    "not_array": "are not a list of prices",
+    "not_numeric": "contain values that are not numbers",
+    "wrong_resolution": "have __count__ values, which fits __other__-minute prices, but the price resolution is __resolution__ minutes. Check the price resolution setting",
+    "too_many": "have __count__ values, more than the __slots__ slots of that day",
+    "today_incomplete": "have __count__ values, but today needs all __slots__"
+  },
+  "zone": {
+    "controller_last": "HVAC Controller missing, using its last known state",
+    "controller_fallback": "HVAC Controller missing for over an hour: comfort without price control",
+    "manual": "Manual: the app does not write to the members",
+    "frost_watchdog": "Manual, but __temperature__ °C is below frost protection __frost__ °C",
+    "zone_off": "Zone off: frost protection __frost__ °C",
+    "master_off": "Mode off: frost protection __frost__ °C",
+    "long_absence": "Long absence: frost protection __frost__ °C, no cooling",
+    "season_off": "Season off: frost protection __frost__ °C",
+    "boost": "Boost to __target__ °C until __until__",
+    "always_eco": "Always eco",
+    "away": "Away: eco",
+    "present": "Present: comfort",
+    "coming_home": "Coming Home: comfort",
+    "expensive": "price expensive: eco",
+    "setback_zero": "setback is 0, so eco equals comfort"
+  },
+  "member": {
+    "heating_device_cooling": "heating device, holds frost protection while cooling",
+    "fan_fallback": "too close to frost protection for fan mode, using setback",
+    "no_step_in_band": "no __step__ °C step fits the comfort range, keeping comfort",
+    "clamped_min": "__value__ °C is below the device minimum, writing __min__ °C",
+    "clamped_max": "__value__ °C is above the device maximum, writing __max__ °C",
+    "invalid": "invalid setpoint __value__, kept the last good value",
+    "fault_wait": "write failed, retrying at __until__",
+    "hold": "waiting for the minimum hold time before writing __value__ °C",
+    "hand_wait": "changed by hand, restoring __value__ °C after the hold time",
+    "hand_restored": "changed by hand to __value__ °C, restored to __written__ °C",
+    "mode_missing": "the device has no __mode__ mode",
+    "no_temperature": "no fresh temperature, relay kept off",
+    "error": "__error__",
+    "write_failed": "wrote __written__ °C but the device reported __reported__ °C"
+  }
+}

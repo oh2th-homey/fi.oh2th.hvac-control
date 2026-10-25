@@ -1,0 +1,15 @@
+{
+  "title": {
+    "en": "Zone is in eco"
+  },
+  "titleFormatted": {
+    "en": "Zone !{{is|is not}} in eco"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=zone"
+    }
+  ]
+}

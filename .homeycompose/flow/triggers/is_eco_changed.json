@@ -1,0 +1,25 @@
+{
+  "title": {
+    "en": "Eco changed"
+  },
+  "hint": {
+    "en": "Use it to run other actions when the zone enters or leaves eco, for example an air conditioner's own fan mode."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=zone"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "is_eco",
+      "type": "boolean",
+      "title": {
+        "en": "Eco"
+      },
+      "example": true
+    }
+  ]
+}

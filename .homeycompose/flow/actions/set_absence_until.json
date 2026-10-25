@@ -1,0 +1,25 @@
+{
+  "title": {
+    "en": "Set long absence until"
+  },
+  "titleFormatted": {
+    "en": "Set long absence until [[date]]"
+  },
+  "hint": {
+    "en": "Everyone is away for days. Starts now: zones keep frost protection only and stop cooling, and return to auto after the given day."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=hvac"
+    },
+    {
+      "type": "date",
+      "name": "date",
+      "title": {
+        "en": "Last day of absence"
+      }
+    }
+  ]
+}

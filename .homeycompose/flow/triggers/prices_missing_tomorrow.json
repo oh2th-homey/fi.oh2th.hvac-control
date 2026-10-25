@@ -1,0 +1,25 @@
+{
+  "title": {
+    "en": "Prices missing for tomorrow"
+  },
+  "hint": {
+    "en": "Runs once a day at the check time set in the HVAC Controller settings, when tomorrow's prices are still missing or partial."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=hvac"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "count",
+      "type": "number",
+      "title": {
+        "en": "Number of prices"
+      },
+      "example": 0
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Setback"
+  },
+  "hint": {
+    "en": "Eco drop from the comfort setpoint, used when nobody is home or the price is expensive. Heating: comfort minus setback. Cooling: comfort plus setback. 0: no eco."
+  },
+  "units": {
+    "en": "°C"
+  },
+  "min": 0,
+  "max": 5,
+  "step": 1,
+  "decimals": 0,
+  "getable": true,
+  "setable": true,
+  "uiComponent": "slider",
+  "insights": true
+}
