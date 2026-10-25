@@ -1,6 +1,6 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
-  "id": "fi.oh2th.heat-cntrl",
+  "id": "fi.oh2th.hvac-control",
   "version": "1.0.0",
   "compatibility": ">=12.4.0",
   "sdk": 3,
@@ -9,7 +9,7 @@
     "local"
   ],
   "name": {
-    "en": "Heating Zone Controller"
+    "en": "Smart HVAC Control"
   },
   "description": {
     "en": "Comfort when you need it, heat when it's cheap, no schedules"
@@ -34,7 +34,7 @@
     "en": [
       "heating",
       "thermostat",
-      "energy prices"
+      "energy"
     ]
   },
   "contributors": {
@@ -54,10 +54,10 @@
       }
     }
   },
-  "source": "https://github.com/oh2th-homey/fi.oh2th.heat-cntrl",
+  "source": "https://github.com/oh2th-homey/fi.oh2th.hvac-control",
   "bugs": {
-    "url": "https://github.com/oh2th-homey/fi.oh2th.heat-cntrl/issues"
+    "url": "https://github.com/oh2th-homey/fi.oh2th.hvac-control/issues"
   },
-  "support": "https://github.com/oh2th-homey/fi.oh2th.heat-cntrl/discussions/categories/general",
+  "support": "https://github.com/oh2th-homey/fi.oh2th.hvac-control/discussions/categories/general",
   "homepage": "https://oh2th.fi/tapio/homey/"
 }
