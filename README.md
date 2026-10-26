@@ -91,19 +91,23 @@ Example with the Power by the Hour app:
 
 ## Flow cards
 
+Where a device uses a standard Homey capability, Homey provides its cards: the season is the
+thermostat mode (Heating, Cooling, Off), the price now has price triggers, the comfort heat dial
+is the target temperature, and Boost has enable, disable and toggle cards. The app adds:
+
 HVAC Controller:
 
-- Actions: **Set occupancy**, **Set season**, **Set mode** (Auto, Long absence, Off),
-  **Set long absence until** a date, **Import prices** (today's or tomorrow's),
-  **Set price model** (with an optional percentage for Above average)
-- Conditions: occupancy is, season is, price is expensive now
-- Triggers: occupancy changed, season changed, mode changed, expensive now changed, prices
-  imported, prices missing for tomorrow (daily at the check time in the controller settings)
+- Actions: **Set occupancy**, **Set mode** (Auto, Long absence, Off), **Set long absence until**
+  a date, **Import prices** (today's or tomorrow's), **Set price model** (with an optional
+  percentage for Above average)
+- Conditions: occupancy is, price is expensive now
+- Triggers: occupancy changed, mode changed, expensive now changed, prices imported, prices
+  missing for tomorrow (daily at the check time in the controller settings)
 
 Heating Zone:
 
 - Actions: **Set zone mode** (Auto, Manual, Off), **Boost zone** for a number of minutes,
-  **Set comfort heat**, **Set comfort cool** (zones with cooling), **Set setback**
+  **Set comfort cool** (zones with cooling), **Set setback**
 - Conditions: zone mode is, zone is in eco
 - Triggers: eco changed, target changed (with the reason), member write failed
 

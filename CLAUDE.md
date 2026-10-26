@@ -114,6 +114,9 @@ No device interval: periodic work runs from `onInterval(now)`, called by the app
 - Device handlers: `async onAction_<UPPER_SNAKE>(value|args)` with a JSDoc `@description` line.
 - Conditions in `lib/flows/conditions.js` the same way, returning a boolean.
 - Card JSON: `title`, `titleFormatted`, `hint`, `args` (device arg with `driver_id=` filter), `tokens`.
+- Standard capabilities get their flow cards from Homey: never add a card that duplicates or
+  overrides one (same id or same purpose). Add own cards only for custom capabilities and for
+  what Homey's cards can't do (e.g. Boost for N minutes, triggers with a reason token).
 
 ### Timers: one interval, always Homey's
 

@@ -199,13 +199,6 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   /**
-   * @description Set the comfort heat setpoint.
-   */
-  async onAction_SET_TARGET_TEMPERATURE(value) {
-    return this.onCapability_TARGET_TEMPERATURE(value);
-  }
-
-  /**
    * @description Set the comfort cool setpoint.
    */
   async onAction_SET_TARGET_TEMPERATURE_COOL(value) {

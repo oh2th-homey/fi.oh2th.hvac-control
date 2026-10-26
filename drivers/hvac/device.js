@@ -127,7 +127,8 @@ module.exports = class hvacDevice extends mainDevice {
     const capabilityValue = key === 'season' ? SEASON_MODE[value] : value;
     if (capabilityValue === this.getCapabilityValue(capability)) return false;
     await this.setValue(capability, capabilityValue);
-    await this.triggerFlow(`${capability}_changed`, { [capability]: this.homey.__(`${key}.${value}`) });
+    // Standard capabilities (season = thermostat_mode) get Homey's own changed trigger.
+    if (capability.startsWith('enum_')) await this.triggerFlow(`${capability}_changed`, { [capability]: this.homey.__(`${key}.${value}`) });
     await this.homey.app.onSharedStateChanged();
     return true;
   }
@@ -137,13 +138,6 @@ module.exports = class hvacDevice extends mainDevice {
    */
   async onAction_SET_ENUM_OCCUPANCY(value) {
     return this.onCapability_OCCUPANCY(value);
-  }
-
-  /**
-   * @description Set season as thermostat mode heat / cool / off (flow action).
-   */
-  async onAction_SET_THERMOSTAT_MODE(value) {
-    return this.onCapability_THERMOSTAT_MODE(value);
   }
 
   /**
