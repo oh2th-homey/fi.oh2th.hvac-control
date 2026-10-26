@@ -33,7 +33,9 @@
     "power_boost": {
       "title": {
         "en": "Boost"
-      }
+      },
+      "uiComponent": "button",
+      "icon": "./assets/capabilities/power_boost.svg"
     },
     "measure_temperature.set_target": {
       "title": {

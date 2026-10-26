@@ -1,15 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960" fill="#000000" stroke="none">
-  <rect x="39.17" y="290" width="521.66" height="40" rx="20" transform="rotate(-41.63 300 310)"/>
-  <rect x="399.17" y="290" width="521.66" height="40" rx="20" transform="rotate(41.63 660 310)"/>
-  <rect x="-30" y="590" width="460" height="40" rx="20" transform="rotate(90 200 610)"/>
-  <rect x="180" y="800" width="600" height="40" rx="20" transform="rotate(0 480 820)"/>
-  <rect x="530" y="590" width="460" height="40" rx="20" transform="rotate(-90 760 610)"/>
-  <rect x="300" y="480" width="280" height="40" rx="20" transform="rotate(90 440 500)"/>
-  <rect x="380" y="480" width="280" height="40" rx="20" transform="rotate(90 520 500)"/>
-  <path d="M420 380A60 60 0 0 1 540 380L500 380A20 20 0 0 0 460 380Z"/>
-  <path fill-rule="evenodd" d="M400 670A80 80 0 1 0 560 670A80 80 0 1 0 400 670ZM440 670A40 40 0 1 1 520 670A40 40 0 1 1 440 670Z"/>
-  <rect x="580" y="500" width="120" height="40" rx="20" transform="rotate(0 640 520)"/>
-  <rect x="580" y="580" width="120" height="40" rx="20" transform="rotate(0 640 600)"/>
-  <rect x="260" y="500" width="120" height="40" rx="20" transform="rotate(0 320 520)"/>
-  <rect x="260" y="580" width="120" height="40" rx="20" transform="rotate(0 320 600)"/>
+  <path fill-rule="evenodd" d="M20 480A460 460 0 1 0 940 480A460 460 0 1 0 20 480ZM60 480A420 420 0 1 1 900 480A420 420 0 1 1 60 480Z"/>
+  <rect x="196.65" y="693.35" width="100" height="40" rx="20" transform="rotate(135 246.65 713.35)"/>
+  <rect x="116.15" y="561.98" width="100" height="40" rx="20" transform="rotate(162 166.15 581.98)"/>
+  <rect x="104.06" y="408.38" width="100" height="40" rx="20" transform="rotate(-171 154.06 428.38)"/>
+  <rect x="163.02" y="266.03" width="100" height="40" rx="20" transform="rotate(-144 213.02 286.03)"/>
+  <rect x="280.18" y="165.97" width="100" height="40" rx="20" transform="rotate(-117 330.18 185.97)"/>
+  <rect x="430" y="130" width="100" height="40" rx="20" transform="rotate(-90 480 150)"/>
+  <rect x="579.82" y="165.97" width="100" height="40" rx="20" transform="rotate(-63 629.82 185.97)"/>
+  <rect x="696.98" y="266.03" width="100" height="40" rx="20" transform="rotate(-36 746.98 286.03)"/>
+  <rect x="755.94" y="408.38" width="100" height="40" rx="20" transform="rotate(-9 805.94 428.38)"/>
+  <rect x="743.85" y="561.98" width="100" height="40" rx="20" transform="rotate(18 793.85 581.98)"/>
+  <rect x="663.35" y="693.35" width="100" height="40" rx="20" transform="rotate(45 713.35 713.35)"/>
+  <rect x="305" y="425" width="270" height="40" rx="20" transform="rotate(90 440 445)"/>
+  <rect x="385" y="425" width="270" height="40" rx="20" transform="rotate(90 520 445)"/>
+  <path d="M420 330A60 60 0 0 1 540 330L500 330A20 20 0 0 0 460 330Z"/>
+  <path fill-rule="evenodd" d="M390 620A90 90 0 1 0 570 620A90 90 0 1 0 390 620ZM430 620A50 50 0 1 1 530 620A50 50 0 1 1 430 620Z"/>
 </svg>

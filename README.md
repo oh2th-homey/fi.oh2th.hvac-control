@@ -38,8 +38,8 @@ an hour and then fall back to comfort temperatures without price control.
 ### Heating Zone
 
 Add one per area. Adding it has two pages: first name the zone and pick its devices room by
-room (a device can be both controlled and a sensor); then configure the picked devices. Change them later with **Repair** in the zone's device
-settings, which shows the same two pages.
+room (a device can be both controlled and a sensor); then configure the picked devices. Change
+them later with **Repair** in the zone's device settings, which shows the same two pages.
 
 - Comfort heat setpoint (the main dial) and, when **Has cooling** is on in the zone settings,
   a comfort cool setpoint (second dial). Without cooling the zone's members are off in the
@@ -48,7 +48,8 @@ settings, which shows the same two pages.
 - Zone mode: Auto, Manual (hands off: you control the members) and Off (members off: air
   conditioners and relays off, thermostats at their lowest setpoint)
 - Low temperature alarm: the zone problem alarm turns on below a set temperature (zone setting)
-- Boost switch: comfort plus the boost amount for the boost time, then back to normal
+- Boost button: comfort plus the boost amount for the boost time, then back to normal. Press it
+  again to end the boost early
 - Target now: the temperature the zone aims at right now (read-only)
 - Shows the zone temperature and humidity, and the reason for every change
 
@@ -57,8 +58,8 @@ settings, which shows the same two pages.
 - **Controlled devices**: thermostats (any device with a settable target temperature), on/off
   relays and smart plugs, and air conditioners / air-to-air heat pumps (heat, cool, off, and
   fan mode when the device offers it)
-- **Climate sensors**: temperature and humidity sensors; the zone uses the average of fresh
-  readings
+- **Climate sensors**: temperature and humidity sensors; the zone uses the average of the
+  sensors that are available in Homey
 
 Per device, when picking members:
 
@@ -115,10 +116,119 @@ Example: an air conditioner whose app keeps fan mode in its own flow cards
 
 - When: Eco changed (the zone) → And: Eco is on → Then: the air conditioner app's fan mode action
 
+## How to
+
+### Follow who is home
+
+Feed occupancy from any presence source you already have:
+
+- When: someone came home → Then: **Set occupancy** to Present
+- When: the last person left → Then: **Set occupancy** to Away
+- Optional, when someone is on the way (for example a geofence a few kilometres out): **Set
+  occupancy** to Coming Home
+
+Every zone re-evaluates at once. Present and Coming Home aim at comfort, Away at eco (comfort
+minus setback). A guest room that should stay at eco until you boost it: set the zone's
+**Occupancy** setting to Always eco.
+
+### Save on expensive price peaks
+
+1. Import today's and tomorrow's prices with **Import prices** (see Prices above). Run the
+   import again when tomorrow's prices are published; a longer import replaces a partial one.
+2. Pick the price model in the HVAC Controller settings, or with **Set price model**:
+   - **Rate is highest** (default, needs 15-minute prices): only short local peaks of one or two
+     quarters count as expensive. Cheap and flat days are not flagged: a price must also be at
+     least the **minimum price difference** (default 0.005 per kWh) above the local median.
+   - **Above average**: every quarter more than the percentage (default 30 %) above today's
+     average counts as expensive.
+3. When a quarter is expensive, the controller shows **Expensive now** and every zone where
+   someone is home drops to eco for that quarter, then returns to comfort. Zones that are
+   already at eco (Away) do not change.
+
+To avoid needless writes to battery thermostats, a price change waits for the zone's
+**Minimum hold time** (default 30 minutes) after the last write to a thermostat. Occupancy, mode
+and setpoint changes are written at once. On/off relays switch on their own schedule (see
+below).
+
+Use the trigger **Expensive now changed** or the condition **Price is expensive now** for
+anything else that should follow the price, such as a water heater.
+
+### Heat a room with a heater on a smart plug or relay
+
+1. Add a Heating Zone and pick the plug or relay as **Relay** and a temperature sensor in the
+   same room as **Sensor**. A zone with relays needs at least one temperature sensor.
+2. The zone switches the relay on below target minus the **Relay hysteresis** (default 0.3 °C)
+   and off above target plus it, with a **minimum on and off time** (default 5 minutes).
+3. Without a temperature from an available sensor, the relay stays off and the zone shows a
+   problem. A sensor that only reports when its value changes is fine; set **Sensor timeout**
+   only if you want old readings ignored.
+
+Wiring where relay off means heating: tick **Inverted** for that relay on the configure page.
+
+### Use an air conditioner or air-to-air heat pump
+
+1. Pick it as **Air conditioner** (and as **Sensor** if it measures the room).
+2. On the configure page choose **Eco**: Setback (a lower setpoint) or Fan mode (only shown when
+   the device has a fan mode). With Fan mode the unit switches to fan when the zone goes to eco
+   and back to heat (or cool) when eco ends.
+3. For cooling, turn on **Has cooling** in the zone settings: the zone gets a Comfort cool
+   dial, and in the cooling season the unit cools to comfort cool, or comfort cool plus setback
+   in eco.
+
+If your air conditioner app keeps fan mode in its own flow cards only, use the zone trigger
+**Eco changed** to run that card yourself.
+
+### Boost a room for a while
+
+Press **Boost** on the zone, or use **Boost zone** in a flow with a number of minutes. The zone
+heats to comfort plus the **Boost amount** (default 1 °C) for the **Boost time** (default 60
+minutes), whatever the occupancy and price, and then returns to normal. Press Boost again to end
+it early. Setting the zone to Manual or Off also ends a boost.
+
+### Leave for days
+
+Use **Set long absence until** with the last day of your trip, or set the controller's mode to
+Long absence. All zones go to eco and cooling is off; on the day after the given date the mode
+returns to Auto by itself. Setting the mode back to Auto ends it early.
+
+### Take a zone over by hand
+
+Set the zone mode to **Manual**: the app stops writing to that zone's devices and you control
+them yourself. In Auto, a setpoint changed by hand on a thermostat is put back at the next write,
+after the minimum hold time; use Manual or Boost instead.
+
+### Get alerted when a room gets cold
+
+Set the zone's **Low temperature alarm** (default 5 °C, 0 = off). Below it the zone's problem
+alarm turns on in every mode; the app does not heat for it. Use the zone's problem alarm in a
+flow to send a notification.
+
+### See why a zone does what it does
+
+Every zone shows a **Reason**, for example:
+
+- `Present: comfort` or `Away: eco`
+- `Present: comfort; price expensive: eco` during an expensive quarter
+- `Boost to 22 °C until 07:25`
+- `Long absence: eco`, `Zone off: members off`
+- `<device>: waiting for the minimum hold time before writing 19 °C`
+
+The HVAC Controller shows the price reason, for example `Expensive: 0.1050 is a short price
+peak (threshold 0.0668)`. The trigger **Target changed** has the reason as a token for
+notifications.
+
 ## Troubleshooting
 
-To be documented per release: reading the zone reason text, prices rejected, member write
-failed, controller missing.
+- **A zone with relays shows a problem: "no temperature from an available sensor"**: the zone
+  has no temperature sensor, or its sensor is unavailable in Homey. If you set **Sensor
+  timeout**, a sensor that has not reported for that long also counts as missing.
+- **"HVAC Controller missing, using its last known state"**: the controller is unavailable or
+  removed. After an hour the zones go to comfort without price control and show a problem.
+- **Prices rejected**: the controller's reason tells why, for example a count that fits hourly
+  prices while the price resolution is 15 minutes. The previous prices are kept.
+- **A thermostat keeps getting the same value back, or reports 4 °C**: the zone retries once
+  with a whole degree, then marks the device as failed, fires **Member write failed** and
+  retries later. If the device only accepts whole degrees, set its **Step** to 1 in Repair.
 
 ## License
 
