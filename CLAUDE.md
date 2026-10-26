@@ -154,8 +154,7 @@ immediately); use `.then(() => this.log(…))`.
   translate facts into modes in flows; that is what made Homey Heating Scheduler too complex.
 - Few concepts: Heating Zone devices, one required HVAC Controller device (shared state), per zone comfort
   heat/cool setpoints + setback (eco), members. Resist adding plans, schedules or mode lists.
-- Safety over savings: the band between comfort and eco is a hard limit, frost floor always
-  enforced, never write NaN/out-of-range/wrongly-typed values to devices (some Zigbee
+- Safety over savings: the band between comfort and eco is a hard limit, never write NaN/out-of-range/wrongly-typed values to devices (some Zigbee
   thermostats fall back to 4.0 °C).
 - Every decision carries a human-readable **reason** string (UI, camera images, notifications).
 - Planner and value pipeline are pure functions with unit tests.

@@ -15,5 +15,6 @@
   },
   "insightsTitleFalse": {
     "en": "Price became normal"
-  }
+  },
+  "icon": "./assets/capabilities/is_expensive.svg"
 }

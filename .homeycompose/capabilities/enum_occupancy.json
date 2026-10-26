@@ -28,5 +28,6 @@
   ],
   "getable": true,
   "setable": true,
-  "uiComponent": "picker"
+  "uiComponent": "picker",
+  "icon": "./assets/capabilities/enum_occupancy.svg"
 }

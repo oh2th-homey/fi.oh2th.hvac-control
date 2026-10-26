@@ -1,13 +1,15 @@
 'use strict';
 
-const { localTime } = require('oh2th-homey-helpers');
+const { localTime, updateCapabilities } = require('oh2th-homey-helpers');
 const mainDevice = require('../main-device');
 const zone = require('../../lib/zone');
 const pipeline = require('../../lib/pipeline');
 
 const VERIFY_MS = 60 * 1000;
 const RETRY_BACKOFF_MIN = [15, 30, 60];
-const DEFAULTS = { 'target_temperature.heat': 21, 'target_temperature.cool': 24, 'num_setback': 2, 'enum_zone_mode': 'auto', 'power_boost': false };
+const COOL = 'target_temperature.cool';
+const COOL_OPTIONS = { title: { en: 'Comfort cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
+const DEFAULTS = { 'target_temperature': 21, 'target_temperature.cool': 24, 'num_setback': 2, 'enum_zone_mode': 'auto', 'power_boost': false };
 
 function round1(value) {
   return typeof value === 'number' && Number.isFinite(value) ? Math.round(value * 10) / 10 : null;
@@ -36,13 +38,32 @@ module.exports = class zoneDevice extends mainDevice {
   async onSettings({ oldSettings, newSettings, changedKeys }) {
     this.log(`${this.getName()} - onSettings - changed: ${changedKeys}`);
     // Settings are saved after this returns.
-    this.setTimer('settings', () => this.evaluate({ urgent: true }), 1000);
+    this.setTimer('settings', async () => {
+      if (changedKeys.includes('has_cooling')) {
+        await this.checkCapabilities();
+        await this.setCapabilityValues(true);
+      }
+      await this.evaluate({ urgent: true });
+    }, 1000);
+  }
+
+  /**
+   * @description Comfort cool is shown only when the zone has cooling.
+   */
+  async checkCapabilities() {
+    const capabilities = [...(this.driver.manifest.capabilities || [])];
+    if (this.getSetting('has_cooling')) capabilities.push(COOL);
+    const result = await updateCapabilities(this, capabilities, this.getCapabilities());
+    if (result.added.includes(COOL)) await this.setCapabilityOptions(COOL, COOL_OPTIONS).catch(this.error);
+    if (this.hasCapability(COOL) && !this.coolListener) {
+      this.registerCapabilityListener(COOL, this.onCapability_COMFORT_COOL.bind(this));
+      this.coolListener = true;
+    }
+    return result;
   }
 
   async setCapabilityListeners() {
     this.registerCapabilityListener('target_temperature', this.onCapability_TARGET_TEMPERATURE.bind(this));
-    this.registerCapabilityListener('target_temperature.heat', this.onCapability_COMFORT_HEAT.bind(this));
-    this.registerCapabilityListener('target_temperature.cool', this.onCapability_COMFORT_COOL.bind(this));
     this.registerCapabilityListener('num_setback', this.onCapability_SETBACK.bind(this));
     this.registerCapabilityListener('enum_zone_mode', this.onCapability_ZONE_MODE.bind(this));
     this.registerCapabilityListener('power_boost', this.onCapability_POWER_BOOST.bind(this));
@@ -81,6 +102,8 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   async onSharedStateChanged() {
+    // Init ends with its own evaluation.
+    if (this.initializing) return;
     await this.evaluate();
   }
 
@@ -88,23 +111,15 @@ module.exports = class zoneDevice extends mainDevice {
    * Capabilities
    */
   /**
-   * @description The tile dial is the comfort setpoint of the current season: comfort cool when cooling, else comfort heat.
+   * @description Comfort heat setpoint (the main dial).
    */
   async onCapability_TARGET_TEMPERATURE(value) {
-    if (this.season() === 'cooling') return this.onCapability_COMFORT_COOL(value);
-    return this.onCapability_COMFORT_HEAT(value);
-  }
-
-  season() {
-    return this.lastShared && this.lastShared.season ? this.lastShared.season : 'heating';
-  }
-
-  async onCapability_COMFORT_HEAT(value) {
-    return this.changeSetpoint('target_temperature.heat', value, 5, 30);
+    return this.changeSetpoint('target_temperature', value, 5, 30);
   }
 
   async onCapability_COMFORT_COOL(value) {
-    return this.changeSetpoint('target_temperature.cool', value, 16, 32);
+    if (!this.hasCapability(COOL)) throw new Error(this.homey.__('error.no_cooling'));
+    return this.changeSetpoint(COOL, value, 16, 32);
   }
 
   async onCapability_SETBACK(value) {
@@ -186,8 +201,8 @@ module.exports = class zoneDevice extends mainDevice {
   /**
    * @description Set the comfort heat setpoint.
    */
-  async onAction_SET_TARGET_TEMPERATURE_HEAT(value) {
-    return this.onCapability_COMFORT_HEAT(value);
+  async onAction_SET_TARGET_TEMPERATURE(value) {
+    return this.onCapability_TARGET_TEMPERATURE(value);
   }
 
   /**
@@ -280,16 +295,17 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   /**
-   * @description Zone temperature and humidity: average of fresh sensor readings (+ offset).
+   * @description Zone temperature and humidity: average of the available sensors' readings.
    */
   updateClimate(ms) {
+    // A reading is used while the sensor is available; the optional timeout (0 = off) also drops old values.
     const staleMs = this.getSetting('sensor_stale_minutes') * 60000;
     const average = (cap) => {
       const values = [];
       for (const member of this.getMembers().filter((m) => m.sensor)) {
         const reading = this.members.read(member.id, cap);
-        if (!reading || typeof reading.value !== 'number') continue;
-        if (reading.lastUpdated && ms - reading.lastUpdated.getTime() > staleMs) continue;
+        if (!reading || typeof reading.value !== 'number' || !reading.available) continue;
+        if (staleMs > 0 && reading.lastUpdated && ms - reading.lastUpdated.getTime() > staleMs) continue;
         values.push(reading.value);
       }
       return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
@@ -311,7 +327,8 @@ module.exports = class zoneDevice extends mainDevice {
   async evaluate({ urgent = false, firstRun = false } = {}) {
     const ms = Date.now();
     const controller = this.homey.app.findController();
-    const live = controller && controller.getAvailable() ? controller.getSharedState() : null;
+    // A controller still initializing after an app restart is present: its capability values persist.
+    const live = controller && (controller.getAvailable() || controller.initializing) ? controller.getSharedState() : null;
     if (live) {
       this.lastShared = live;
       await this.setStoreValue('lastShared', live).catch(this.error);
@@ -324,10 +341,11 @@ module.exports = class zoneDevice extends mainDevice {
       zone: {
         mode: this.getCapabilityValue('enum_zone_mode'),
         boostUntil: this.getCapabilityValue('power_boost') === true ? this.getStoreValue('boostUntil') : null,
-        heat: this.getCapabilityValue('target_temperature.heat'),
-        cool: this.getCapabilityValue('target_temperature.cool'),
+        heat: this.getCapabilityValue('target_temperature'),
+        cool: this.getCapabilityValue(COOL),
+        hasCooling: this.hasCapability(COOL),
         setback: this.getCapabilityValue('num_setback'),
-        frostFloor: this.getSetting('frost_floor'),
+        lowAlarm: this.getSetting('low_temp_alarm'),
         boostDelta: this.getSetting('boost_delta'),
         occupancyRule: this.getSetting('occupancy_rule')
       },
@@ -346,13 +364,10 @@ module.exports = class zoneDevice extends mainDevice {
     const reason = this.reasonText();
     const changed = target !== null && target !== this.getCapabilityValue('measure_temperature.set_target');
     if (target !== null) await this.setValue('measure_temperature.set_target', target, firstRun);
-    // The dial follows the comfort setpoint of the season.
-    const comfort = shared.season === 'cooling' ? 'target_temperature.cool' : 'target_temperature.heat';
-    await this.setValue('target_temperature', this.getCapabilityValue(comfort), firstRun);
     await this.setValue('is_eco', decision.eco, firstRun);
     await this.setValue('text_reason', reason, firstRun);
-    // Only real problems: member write failed, relays without temperature, controller missing for over an hour.
-    await this.setValue('alarm_problem', source === 'fallback' || this.issues.some((issue) => issue.alarm), firstRun);
+    // Only real problems: member write failed, relays without temperature, low temperature, controller missing for over an hour.
+    await this.setValue('alarm_problem', source === 'fallback' || decision.lowTemperature || this.issues.some((issue) => issue.alarm), firstRun);
     if (changed && !firstRun) await this.triggerFlow('measure_temperature_set_target_changed', { measure_temperature_set_target: target, text_reason: reason });
   }
 
@@ -379,7 +394,7 @@ module.exports = class zoneDevice extends mainDevice {
     const holdMs = this.getSetting('hold_minutes') * 60000;
     for (const member of this.getMembers().filter((m) => m.control === 'thermostat' || m.control === 'ac')) {
       try {
-        const plan = pipeline.memberPlan(this.decision, member, { temperature: this.getCapabilityValue('measure_temperature'), frostFloor: this.getSetting('frost_floor') });
+        const plan = pipeline.memberPlan(this.decision, member);
         if (plan.skip) continue;
         for (const reason of plan.reasons) this.issue(member, reason.code, reason.args);
         const st = this.state(member);
@@ -503,7 +518,8 @@ module.exports = class zoneDevice extends mainDevice {
         const raw = reading ? reading.value === true : false;
         const on = member.invert ? !raw : raw;
         const st = this.state(member);
-        const target = this.decision.action === 'cool' ? null : this.decision.target;
+        // Relays heat: on/off around the target only while heating, off otherwise.
+        const target = this.decision.action === 'heat' ? this.decision.target : null;
         const result = pipeline.relay({
           on,
           temperature: this.getCapabilityValue('measure_temperature'),

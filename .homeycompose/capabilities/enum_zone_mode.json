@@ -4,7 +4,7 @@
     "en": "Zone mode"
   },
   "hint": {
-    "en": "Auto: the app sets the members. Manual: hands off, you control the members (frost protection stays on). Off: frost protection only. Boost is a separate switch."
+    "en": "Auto: the app sets the members. Manual: hands off, you control the members. Off: the members are off. Boost is a separate switch."
   },
   "values": [
     {
@@ -28,5 +28,6 @@
   ],
   "getable": true,
   "setable": true,
-  "uiComponent": "picker"
+  "uiComponent": "picker",
+  "icon": "./assets/capabilities/enum_zone_mode.svg"
 }

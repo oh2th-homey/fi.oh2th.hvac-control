@@ -6,7 +6,7 @@
     "en": "Set long absence until [[date]]"
   },
   "hint": {
-    "en": "Everyone is away for days. Starts now: zones keep frost protection only and stop cooling, and return to auto after the given day."
+    "en": "Everyone is away for days. Starts now: zones go to eco and stop cooling, and return to auto after the given day."
   },
   "args": [
     {

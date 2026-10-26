@@ -7,7 +7,7 @@ const zone = require('../lib/zone');
 const pipeline = require('../lib/pipeline');
 
 const NOW = Date.UTC(2026, 10, 10, 12);
-const ZONE = { mode: 'auto', boostUntil: null, heat: 21, cool: 24, setback: 2, frostFloor: 8, boostDelta: 1, occupancyRule: 'follows' };
+const ZONE = { mode: 'auto', boostUntil: null, heat: 21, cool: 24, setback: 2, boostDelta: 1, occupancyRule: 'follows', lowAlarm: 5 };
 const SHARED = { occupancy: 'present', season: 'heating', masterMode: 'auto', expensive: false };
 
 function decide(shared = {}, z = {}, extra = {}) {
@@ -30,31 +30,40 @@ test('cooling inverts the band', () => {
   assert.strictEqual(decide({ season: 'cooling', expensive: true }).target, 26);
 });
 
-test('frost: zone off, master off, long absence, season off', () => {
+test('off: zone off, master off, season off, cooling without cooling', () => {
   for (const [shared, z, code] of [
     [{}, { mode: 'off' }, 'zone_off'],
     [{ masterMode: 'off' }, {}, 'master_off'],
-    [{ masterMode: 'long_absence' }, {}, 'long_absence'],
-    [{ season: 'off' }, {}, 'season_off']
+    [{ season: 'off' }, {}, 'season_off'],
+    [{ season: 'cooling' }, { hasCooling: false, cool: null }, 'no_cooling'],
+    [{ masterMode: 'long_absence', season: 'cooling' }, {}, 'long_absence_cooling']
   ]) {
     const d = decide(shared, z);
-    assert.deepStrictEqual([d.action, d.target, d.reasons.at(-1).code], ['frost', 8, code]);
+    assert.deepStrictEqual([d.action, d.target, d.reasons.at(-1).code], ['off', null, code]);
   }
 });
 
-test('frost floor holds eco up', () => {
-  assert.strictEqual(decide({ occupancy: 'away' }, { heat: 9, setback: 4 }).target, 8);
+test('long absence: eco like away, not price driven', () => {
+  const d = decide({ masterMode: 'long_absence', expensive: true });
+  assert.deepStrictEqual([d.action, d.aim, d.target, d.priceDriven, d.reasons.at(-1).code], ['heat', 'eco', 19, false, 'long_absence']);
 });
 
-test('manual: hands off, frost watchdog still on', () => {
-  assert.strictEqual(decide({}, { mode: 'manual' }, { temperature: 15 }).action, 'none');
-  const cold = decide({}, { mode: 'manual' }, { temperature: 6 });
-  assert.deepStrictEqual([cold.action, cold.target], ['frost', 8]);
+test('no floor: eco follows the setback', () => {
+  assert.strictEqual(decide({ occupancy: 'away' }, { heat: 9, setback: 4 }).target, 5);
+});
+
+test('manual: hands off; low temperature alarm in every mode, no heating', () => {
+  const warm = decide({}, { mode: 'manual' }, { temperature: 15 });
+  assert.deepStrictEqual([warm.action, warm.lowTemperature], ['none', false]);
+  const cold = decide({}, { mode: 'manual' }, { temperature: 4 });
+  assert.deepStrictEqual([cold.action, cold.lowTemperature, cold.reasons[0].code], ['none', true, 'low_temperature']);
+  assert.strictEqual(decide({}, { mode: 'off' }, { temperature: 4 }).lowTemperature, true);
+  assert.strictEqual(decide({}, { lowAlarm: 0 }, { temperature: 1 }).lowTemperature, false);
 });
 
 test('boost until a time, then normal; not in manual or off', () => {
   assert.strictEqual(decide({}, { mode: 'manual', boostUntil: NOW + 60000 }).aim, 'manual');
-  assert.strictEqual(decide({}, { mode: 'off', boostUntil: NOW + 60000 }).aim, 'frost');
+  assert.strictEqual(decide({}, { mode: 'off', boostUntil: NOW + 60000 }).aim, 'off');
   const boost = decide({ occupancy: 'away' }, { boostUntil: NOW + 60000 });
   assert.deepStrictEqual([boost.aim, boost.target], ['boost', 22]);
   assert.strictEqual(decide({ occupancy: 'away' }, { boostUntil: NOW - 1 }).aim, 'eco');
@@ -70,15 +79,13 @@ test('controller missing: last known for 1 h, then present without price control
 });
 
 test('setpoint rounds toward the inside of the band', () => {
-  const step1 = { min: 5, max: 30, step: 1, offset: 0 };
+  const step1 = { min: 5, max: 30, step: 1 };
   // Comfort 21.5 is the top of band [19.5, 21.5]: round down.
   assert.strictEqual(pipeline.setpoint(decide({}, { heat: 21.5 }), step1).value, 21);
   // Eco 19.5 is the bottom: round up.
   assert.strictEqual(pipeline.setpoint(decide({ occupancy: 'away' }, { heat: 21.5 }), step1).value, 20);
   // Cooling comfort 23.5 is the bottom of [23.5, 25.5]: round up.
   assert.strictEqual(pipeline.setpoint(decide({ season: 'cooling' }, { cool: 23.5 }), step1).value, 24);
-  // Offset applies before rounding.
-  assert.strictEqual(pipeline.setpoint(decide(), { ...step1, offset: 0.6 }).value, 21);
 });
 
 test('setpoint: no step in band protects comfort', () => {
@@ -88,15 +95,17 @@ test('setpoint: no step in band protects comfort', () => {
   assert.strictEqual(pipeline.setpoint(decide({ season: 'cooling' }, { cool: 23.5, setback: 0 }), step1).value, 23);
 });
 
-test('setpoint: clean numbers, clamp, frost', () => {
+test('setpoint: clean numbers, clamp, off', () => {
   const half = pipeline.setpoint(decide({}, { heat: 20.7 }), { min: 5, max: 30, step: 0.5 });
   assert.strictEqual(half.value, 20.5);
   const step1 = pipeline.setpoint(decide(), { min: 5, max: 30, step: 1 }).value;
   assert.ok(Number.isInteger(step1));
   assert.strictEqual(pipeline.setpoint(decide({}, {}), { min: 5, max: 30, step: 0.1 }).value, 21);
-  // A/C minimum 10 while the frost floor is 8.
-  const frost = pipeline.setpoint(decide({}, { mode: 'off' }), { min: 10, max: 30, step: 1 });
-  assert.deepStrictEqual([frost.value, frost.reasons[0].code], [10, 'clamped_min']);
+  const low = pipeline.setpoint(decide({}, { heat: 8, setback: 0 }), { min: 10, max: 30, step: 1 });
+  assert.deepStrictEqual([low.value, low.reasons.at(-1).code], [10, 'clamped_min']);
+  // Off: the thermostat's own lowest setpoint.
+  const member = { control: 'thermostat', min: 5, max: 30, step: 0.5 };
+  assert.strictEqual(pipeline.setpoint(pipeline.memberPlan(decide({}, { mode: 'off' }), member).decision, member).value, 5);
   assert.strictEqual(pipeline.setpoint({ ...decide(), target: NaN }, { min: 5, max: 30, step: 1 }).value, null);
 });
 
@@ -127,19 +136,18 @@ test('relay: hysteresis, min on/off, no temperature', () => {
   assert.strictEqual(pipeline.relay({ ...base, on: false, temperature: 21.4, heating: false }).on, true);
 });
 
-test('memberPlan: thermostat in cooling holds frost, A/C modes and fan eco', () => {
-  const zoneInfo = { temperature: 20, frostFloor: 8 };
-  const thermostat = { control: 'thermostat' };
-  const ac = { control: 'ac', ecoMode: 'fan', modes: ['heat', 'cool', 'off', 'fan'] };
-  assert.strictEqual(pipeline.memberPlan(decide({}, { mode: 'manual' }), thermostat, zoneInfo).skip, true);
-  assert.strictEqual(pipeline.memberPlan(decide({ season: 'cooling' }), thermostat, zoneInfo).decision.target, 8);
-  assert.strictEqual(pipeline.memberPlan(decide(), ac, zoneInfo).mode, 'heat');
-  assert.strictEqual(pipeline.memberPlan(decide({ season: 'cooling' }), ac, zoneInfo).mode, 'cool');
-  assert.strictEqual(pipeline.memberPlan(decide({ occupancy: 'away' }), ac, zoneInfo).mode, 'fan');
-  // Heating near the frost floor: no fan, setback instead.
-  const cold = pipeline.memberPlan(decide({ occupancy: 'away' }), ac, { temperature: 9, frostFloor: 8 });
-  assert.deepStrictEqual([cold.mode, cold.reasons[0].code], ['heat', 'fan_fallback']);
-  assert.strictEqual(pipeline.memberPlan(decide({ occupancy: 'away' }), { ...ac, modes: ['heat', 'cool', 'off'] }, zoneInfo).mode, 'heat');
-  assert.strictEqual(pipeline.memberPlan(decide({ masterMode: 'long_absence' }), ac, zoneInfo).mode, 'heat');
-  assert.strictEqual(pipeline.memberPlan(decide({ masterMode: 'long_absence', season: 'cooling' }), ac, zoneInfo).mode, 'off');
+test('memberPlan: off, thermostat in cooling, A/C modes and fan eco', () => {
+  const thermostat = { control: 'thermostat', min: 5 };
+  const ac = { control: 'ac', ecoMode: 'fan', modes: ['heat', 'cool', 'off', 'fan'], min: 10 };
+  assert.strictEqual(pipeline.memberPlan(decide({}, { mode: 'manual' }), thermostat).skip, true);
+  assert.strictEqual(pipeline.memberPlan(decide({}, { mode: 'off' }), thermostat).decision.target, 5);
+  const summer = pipeline.memberPlan(decide({ season: 'cooling' }), thermostat);
+  assert.deepStrictEqual([summer.decision.target, summer.reasons[0].code], [5, 'heating_device_cooling']);
+  assert.deepStrictEqual([pipeline.memberPlan(decide({}, { mode: 'off' }), ac).mode, pipeline.memberPlan(decide({}, { mode: 'off' }), ac).decision], ['off', null]);
+  assert.strictEqual(pipeline.memberPlan(decide(), ac).mode, 'heat');
+  assert.strictEqual(pipeline.memberPlan(decide({ season: 'cooling' }), ac).mode, 'cool');
+  assert.strictEqual(pipeline.memberPlan(decide({ occupancy: 'away' }), ac).mode, 'fan');
+  assert.strictEqual(pipeline.memberPlan(decide({ occupancy: 'away' }), { ...ac, modes: ['heat', 'cool', 'off'] }).mode, 'heat');
+  assert.strictEqual(pipeline.memberPlan(decide({ masterMode: 'long_absence' }), { ...ac, ecoMode: 'setback' }).mode, 'heat');
+  assert.strictEqual(pipeline.memberPlan(decide({ masterMode: 'long_absence', season: 'cooling' }), ac).mode, 'off');
 });

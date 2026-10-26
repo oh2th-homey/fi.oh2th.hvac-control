@@ -18,8 +18,7 @@ maintain; flows only tell the app what is going on.
    energy prices with the **Import prices** action card.
 
 If the HVAC Controller is removed or unavailable, zones keep their last known state for up to
-an hour and then fall back to comfort temperatures without price control. Frost protection is
-always active.
+an hour and then fall back to comfort temperatures without price control.
 
 ## Devices
 
@@ -29,8 +28,8 @@ always active.
   (nobody is home). Set it with the **Set occupancy** card from whatever presence source you
   use: presence, a geofence, a switch, anything a flow can see.
 - Season: heating, cooling, off
-- Mode: Auto, Long absence (everyone away for days, until a date: frost protection only, no
-  cooling) or Off
+- Mode: Auto, Long absence (everyone away for days, until a date: zones at eco, no cooling) or
+  Off (zones stop heating and cooling)
 - Price model: Rate is highest (short local price peaks), Above average (N % above today's
   average) or Off
 - Price resolution: 15 minutes or 60 minutes. Rate is highest needs 15-minute prices; with
@@ -38,16 +37,18 @@ always active.
 
 ### Heating Zone
 
-Add one per area. While adding it, give it a name and pick its members (see below). Change the
-members later with **Repair** in the zone's device settings.
+Add one per area. Adding it has two pages: first name the zone and pick its devices room by
+room (a device can be both controlled and a sensor); then configure the picked devices. Change them later with **Repair** in the zone's device
+settings, which shows the same two pages.
 
-- Comfort heat setpoint and comfort cool setpoint
+- Comfort heat setpoint (the main dial) and, when **Has cooling** is on in the zone settings,
+  a comfort cool setpoint (second dial). Without cooling the zone's members are off in the
+  cooling season
 - Setback 0–5 °C: the eco drop used when away or when the price is high
-- Zone mode: Auto, Manual (hands off: you control the members, frost protection stays on) and
-  Off (frost protection only)
+- Zone mode: Auto, Manual (hands off: you control the members) and Off (members off: air
+  conditioners and relays off, thermostats at their lowest setpoint)
+- Low temperature alarm: the zone problem alarm turns on below a set temperature (zone setting)
 - Boost switch: comfort plus the boost amount for the boost time, then back to normal
-- The tile dial sets comfort: comfort heat in the heating season, comfort cool in the cooling
-  season
 - Target now: the temperature the zone aims at right now (read-only)
 - Shows the zone temperature and humidity, and the reason for every change
 
@@ -58,6 +59,13 @@ members later with **Repair** in the zone's device settings.
   fan mode when the device offers it)
 - **Climate sensors**: temperature and humidity sensors; the zone uses the average of fresh
   readings
+
+Per device, when picking members:
+
+- **Step**: the setpoint step the device really accepts (1, 0.5 or 0.1 °C). Some thermostats
+  claim 0.5 but only take whole degrees; the app also learns this from what the device reports.
+- **Eco** (air conditioners with a fan mode): setback (lower setpoint) or fan mode.
+- **Inverted** (relays): for wiring where relay off means heating.
 
 Setpoints are always rounded to what each device accepts and kept within its own limits, so
 devices never receive values they cannot handle.
@@ -94,7 +102,7 @@ HVAC Controller:
 Heating Zone:
 
 - Actions: **Set zone mode** (Auto, Manual, Off), **Boost zone** for a number of minutes,
-  **Set comfort heat**, **Set comfort cool**, **Set setback**
+  **Set comfort heat**, **Set comfort cool** (zones with cooling), **Set setback**
 - Conditions: zone mode is, zone is in eco
 - Triggers: eco changed, target changed (with the reason), member write failed
 

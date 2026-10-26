@@ -1,0 +1,123 @@
+<!-- Page 1: pick the zone's devices, per room. Homey's own Continue button goes to page 2; every change is saved
+     to the session at once. drivers/zone/repair/select.html is a copy with REPAIR = true. -->
+<style>
+  .hz-room { margin-top: 1.2em; }
+  .hz-device { padding: 0.5em 0; border-bottom: 1px solid var(--homey-color-mono-100, #eee); }
+  .hz-device-name { display: block; margin-bottom: 0.2em; }
+  .hz-roles { display: flex; flex-wrap: wrap; gap: 0 1.4em; }
+  .hz-empty, .hz-error { margin: 0.8em 0; }
+  .hz-error { color: var(--homey-color-red-500, #d33); }
+</style>
+
+<header class="homey-header">
+  <h1 class="homey-title" data-i18n="pair.members.title_select"></h1>
+  <p class="homey-subtitle" data-i18n="pair.members.subtitle_select"></p>
+</header>
+
+<form class="homey-form" onsubmit="return false">
+  <div class="homey-form-group" id="sel-name-group">
+    <label class="homey-form-label" for="sel-zone-name" data-i18n="pair.members.name"></label>
+    <input class="homey-form-input" id="sel-zone-name" type="text" />
+  </div>
+  <div id="sel-rooms"></div>
+  <p class="hz-error" id="sel-error"></p>
+</form>
+
+<script type="application/javascript">
+  (function () {
+    // Own scope: Homey loads pairing views into one document, so top-level const/let would clash between pages.
+    const REPAIR = false;
+    const roomsEl = document.getElementById('sel-rooms');
+    const errorEl = document.getElementById('sel-error');
+    const nameEl = document.getElementById('sel-zone-name');
+    let candidates = [];
+
+    function t(key) {
+      return Homey.__(`pair.members.${key}`);
+    }
+
+    function el(tag, attrs = {}, children = []) {
+      const node = document.createElement(tag);
+      for (const [key, value] of Object.entries(attrs)) {
+        if (key === 'text') node.textContent = value;
+        else if (key === 'checked') node.checked = value;
+        else node.setAttribute(key, value);
+      }
+      for (const child of children) node.appendChild(child);
+      return node;
+    }
+
+    function controlKind(device) {
+      if (device.ac) return 'ac';
+      if (device.setpoint) return 'thermostat';
+      if (device.relay) return 'relay';
+      return null;
+    }
+
+    function checkbox(role, device, checked) {
+      return el('label', { class: 'homey-form-checkbox' }, [
+        el('input', { class: 'homey-form-checkbox-input', type: 'checkbox', 'data-role': role, 'data-id': device.id, checked }),
+        el('span', { class: 'homey-form-checkbox-checkmark' }),
+        el('span', { class: 'homey-form-checkbox-text', text: t(role === 'sensor' ? 'sensor' : role) })
+      ]);
+    }
+
+    function render(selection) {
+      roomsEl.innerHTML = '';
+      if (candidates.length === 0) roomsEl.appendChild(el('p', { class: 'hz-empty', text: t('none_found') }));
+      let room = null;
+      let fieldset = null;
+      for (const device of candidates) {
+        if (device.zone !== room || !fieldset) {
+          room = device.zone;
+          fieldset = el('fieldset', { class: 'homey-form-fieldset hz-room' }, [el('legend', { class: 'homey-form-legend', text: room || '—' })]);
+          roomsEl.appendChild(fieldset);
+        }
+        const picked = selection[device.id] || {};
+        const kind = controlKind(device);
+        const roles = el('div', { class: 'hz-roles' });
+        if (kind) roles.appendChild(checkbox(kind, device, picked.control === kind));
+        if (device.temperature || device.humidity) roles.appendChild(checkbox('sensor', device, !!picked.sensor));
+        fieldset.appendChild(el('div', { class: 'hz-device' }, [el('span', { class: 'hz-device-name', text: device.name }), roles]));
+      }
+    }
+
+    function collect() {
+      const picked = {};
+      for (const box of roomsEl.querySelectorAll('input[type="checkbox"]')) {
+        if (!box.checked) continue;
+        const member = picked[box.dataset.id] || { id: box.dataset.id, control: null, sensor: false };
+        if (box.dataset.role === 'sensor') member.sensor = true;
+        else member.control = box.dataset.role;
+        picked[box.dataset.id] = member;
+      }
+      return Object.values(picked);
+    }
+
+    async function save() {
+      const name = REPAIR ? null : nameEl.value.trim() || t('default_name');
+      await Homey.emit('select', { name, members: collect() }).catch((error) => {
+        errorEl.textContent = error.message || String(error);
+      });
+    }
+
+    roomsEl.addEventListener('change', save);
+    nameEl.addEventListener('input', save);
+    if (REPAIR) document.getElementById('sel-name-group').style.display = 'none';
+
+    Homey.showLoadingOverlay();
+    (async () => {
+      try {
+        if (!REPAIR) await Homey.emit('check_controller');
+        const { candidates: list, name, members } = await Homey.emit('get_selection');
+        candidates = list;
+        if (name) nameEl.value = name;
+        render(Object.fromEntries(members.map((member) => [member.id, member])));
+      } catch (error) {
+        errorEl.textContent = error.message || String(error);
+      } finally {
+        Homey.hideLoadingOverlay();
+      }
+    })();
+  })();
+</script>

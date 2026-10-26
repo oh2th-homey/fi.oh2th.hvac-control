@@ -35,6 +35,13 @@ module.exports = class hvacDevice extends mainDevice {
     await this.evaluatePrices(newSettings);
   }
 
+  /**
+   * @description Zones that started before the controller re-evaluate with its state now.
+   */
+  async onReady() {
+    await this.homey.app.onSharedStateChanged();
+  }
+
   async setCapabilityListeners() {
     this.registerCapabilityListener('enum_occupancy', this.onCapability_OCCUPANCY.bind(this));
     this.registerCapabilityListener('thermostat_mode', this.onCapability_THERMOSTAT_MODE.bind(this));

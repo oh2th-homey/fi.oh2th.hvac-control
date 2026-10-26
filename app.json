@@ -538,7 +538,7 @@
           "en": "Set long absence until [[date]]"
         },
         "hint": {
-          "en": "Everyone is away for days. Starts now: zones keep frost protection only and stop cooling, and return to auto after the given day."
+          "en": "Everyone is away for days. Starts now: zones go to eco and stop cooling, and return to auto after the given day."
         },
         "args": [
           {
@@ -818,32 +818,6 @@
       },
       {
         "title": {
-          "en": "Set comfort cool"
-        },
-        "titleFormatted": {
-          "en": "Set comfort cool to [[temperature]] °C"
-        },
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=zone"
-          },
-          {
-            "type": "number",
-            "name": "temperature",
-            "title": {
-              "en": "Temperature"
-            },
-            "min": 16,
-            "max": 32,
-            "step": 0.5
-          }
-        ],
-        "id": "set_target_temperature_cool"
-      },
-      {
-        "title": {
           "en": "Set comfort heat"
         },
         "titleFormatted": {
@@ -866,7 +840,36 @@
             "step": 0.5
           }
         ],
-        "id": "set_target_temperature_heat"
+        "id": "set_target_temperature"
+      },
+      {
+        "title": {
+          "en": "Set comfort cool"
+        },
+        "titleFormatted": {
+          "en": "Set comfort cool to [[temperature]] °C"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=zone"
+          },
+          {
+            "type": "number",
+            "name": "temperature",
+            "title": {
+              "en": "Temperature"
+            },
+            "min": 16,
+            "max": 32,
+            "step": 0.5
+          }
+        ],
+        "hint": {
+          "en": "Only for zones with Has cooling turned on in the zone settings."
+        },
+        "id": "set_target_temperature_cool"
       },
       {
         "title": {
@@ -1113,7 +1116,7 @@
               },
               "value": "",
               "hint": {
-                "en": "Last day of a long absence (everyone away for days) as YYYY-MM-DD. While set, the mode is Long absence: frost protection only, no cooling. After this day it returns to Auto. Empty: no end date."
+                "en": "Last day of a long absence (everyone away for days) as YYYY-MM-DD. While set, the mode is Long absence: zones at eco, no cooling. After this day it returns to Auto. Empty: no end date."
               }
             }
           ]
@@ -1136,8 +1139,6 @@
       "class": "thermostat",
       "capabilities": [
         "target_temperature",
-        "target_temperature.heat",
-        "target_temperature.cool",
         "num_setback",
         "measure_temperature.set_target",
         "measure_temperature",
@@ -1151,28 +1152,10 @@
       "capabilitiesOptions": {
         "target_temperature": {
           "title": {
-            "en": "Comfort"
-          },
-          "min": 5,
-          "max": 32,
-          "step": 0.5,
-          "decimals": 1
-        },
-        "target_temperature.heat": {
-          "title": {
             "en": "Comfort heat"
           },
           "min": 5,
           "max": 30,
-          "step": 0.5,
-          "decimals": 1
-        },
-        "target_temperature.cool": {
-          "title": {
-            "en": "Comfort cool"
-          },
-          "min": 16,
-          "max": 32,
           "step": 0.5,
           "decimals": 1
         },
@@ -1195,12 +1178,30 @@
       },
       "pair": [
         {
-          "id": "members"
+          "id": "select",
+          "navigation": {
+            "next": "configure"
+          }
+        },
+        {
+          "id": "configure",
+          "navigation": {
+            "prev": "select"
+          }
         }
       ],
       "repair": [
         {
-          "id": "members"
+          "id": "select",
+          "navigation": {
+            "next": "configure"
+          }
+        },
+        {
+          "id": "configure",
+          "navigation": {
+            "prev": "select"
+          }
         }
       ],
       "settings": [
@@ -1210,6 +1211,17 @@
             "en": "Zone"
           },
           "children": [
+            {
+              "id": "has_cooling",
+              "type": "checkbox",
+              "label": {
+                "en": "Has cooling"
+              },
+              "value": false,
+              "hint": {
+                "en": "The zone has cooling, for example an air conditioner or air-to-air heat pump. Shows the Comfort cool setpoint. Without cooling, the zone's members are off in the cooling season."
+              }
+            },
             {
               "id": "occupancy_rule",
               "type": "dropdown",
@@ -1236,20 +1248,20 @@
               ]
             },
             {
-              "id": "frost_floor",
+              "id": "low_temp_alarm",
               "type": "number",
               "label": {
-                "en": "Frost protection"
+                "en": "Low temperature alarm"
               },
-              "value": 8,
-              "min": 5,
-              "max": 15,
+              "value": 5,
+              "min": 0,
+              "max": 20,
               "step": 0.5,
               "units": {
                 "en": "°C"
               },
               "hint": {
-                "en": "Never heat below this, also in long absence, off and manual."
+                "en": "Zone problem alarm when the zone temperature falls below this, in every mode. The app does not heat for it. 0: no alarm."
               }
             },
             {
@@ -1368,15 +1380,15 @@
               "label": {
                 "en": "Sensor timeout"
               },
-              "value": 120,
-              "min": 10,
+              "value": 0,
+              "min": 0,
               "max": 1440,
               "step": 10,
               "units": {
                 "en": "min"
               },
               "hint": {
-                "en": "A climate sensor reading older than this is ignored."
+                "en": "A climate sensor is used while it is available in Homey. Optionally also ignore a reading not updated for this long. 0: off, for sensors that only report changes or are set by flows."
               }
             }
           ]
@@ -1392,7 +1404,7 @@
         "en": "Mode"
       },
       "hint": {
-        "en": "Auto: zones follow occupancy and prices. Long absence: everyone away for days, frost protection only, no cooling. Off: zones stop controlling, frost protection only."
+        "en": "Auto: zones follow occupancy and prices. Long absence: everyone away for days, zones at eco and no cooling. Off: zones stop heating and cooling."
       },
       "values": [
         {
@@ -1416,7 +1428,8 @@
       ],
       "getable": true,
       "setable": true,
-      "uiComponent": "picker"
+      "uiComponent": "picker",
+      "icon": "./assets/capabilities/enum_master_mode.svg"
     },
     "enum_occupancy": {
       "type": "enum",
@@ -1448,7 +1461,8 @@
       ],
       "getable": true,
       "setable": true,
-      "uiComponent": "picker"
+      "uiComponent": "picker",
+      "icon": "./assets/capabilities/enum_occupancy.svg"
     },
     "enum_zone_mode": {
       "type": "enum",
@@ -1456,7 +1470,7 @@
         "en": "Zone mode"
       },
       "hint": {
-        "en": "Auto: the app sets the members. Manual: hands off, you control the members (frost protection stays on). Off: frost protection only. Boost is a separate switch."
+        "en": "Auto: the app sets the members. Manual: hands off, you control the members. Off: the members are off. Boost is a separate switch."
       },
       "values": [
         {
@@ -1480,7 +1494,8 @@
       ],
       "getable": true,
       "setable": true,
-      "uiComponent": "picker"
+      "uiComponent": "picker",
+      "icon": "./assets/capabilities/enum_zone_mode.svg"
     },
     "is_eco": {
       "type": "boolean",
@@ -1499,7 +1514,8 @@
       },
       "insightsTitleFalse": {
         "en": "Eco ended"
-      }
+      },
+      "icon": "./assets/capabilities/is_eco.svg"
     },
     "is_expensive": {
       "type": "boolean",
@@ -1518,7 +1534,8 @@
       },
       "insightsTitleFalse": {
         "en": "Price became normal"
-      }
+      },
+      "icon": "./assets/capabilities/is_expensive.svg"
     },
     "num_setback": {
       "type": "number",
@@ -1538,7 +1555,8 @@
       "getable": true,
       "setable": true,
       "uiComponent": "slider",
-      "insights": true
+      "insights": true,
+      "icon": "./assets/capabilities/num_setback.svg"
     },
     "text_prices_until": {
       "type": "string",
@@ -1550,7 +1568,8 @@
       },
       "getable": true,
       "setable": false,
-      "uiComponent": "sensor"
+      "uiComponent": "sensor",
+      "icon": "./assets/capabilities/text_prices_until.svg"
     },
     "text_reason": {
       "type": "string",
@@ -1562,7 +1581,8 @@
       },
       "getable": true,
       "setable": false,
-      "uiComponent": "sensor"
+      "uiComponent": "sensor",
+      "icon": "./assets/capabilities/text_reason.svg"
     }
   }
 }

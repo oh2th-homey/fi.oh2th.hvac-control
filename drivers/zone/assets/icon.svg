@@ -1,6 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960" fill="none" stroke="#000" stroke-width="40" stroke-linecap="round" stroke-linejoin="round">
-  <rect x="140" y="160" width="680" height="640" rx="40"/>
-  <path d="M480 160 V800 M140 480 H480"/>
-  <circle cx="650" cy="600" r="50"/>
-  <path d="M615 560 V360 A35 35 0 0 1 685 360 V560"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960" fill="#000000" stroke="none">
+  <path fill-rule="evenodd" d="M180 140H780A60 60 0 0 1 840 200V760A60 60 0 0 1 780 820H180A60 60 0 0 1 120 760V200A60 60 0 0 1 180 140ZM180 180H780A20 20 0 0 1 800 200V760A20 20 0 0 1 780 780H180A20 20 0 0 1 160 760V200A20 20 0 0 1 180 180Z"/>
+  <rect x="140" y="460" width="680" height="40" rx="20" transform="rotate(90 480 480)"/>
+  <rect x="120" y="460" width="380" height="40" rx="20" transform="rotate(0 310 480)"/>
+  <rect x="495" y="440" width="240" height="40" rx="20" transform="rotate(90 615 460)"/>
+  <rect x="565" y="440" width="240" height="40" rx="20" transform="rotate(90 685 460)"/>
+  <path d="M595 360A55 55 0 0 1 705 360L665 360A15 15 0 0 0 635 360Z"/>
+  <path fill-rule="evenodd" d="M580 600A70 70 0 1 0 720 600A70 70 0 1 0 580 600ZM620 600A30 30 0 1 1 680 600A30 30 0 1 1 620 600Z"/>
 </svg>

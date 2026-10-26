@@ -7,14 +7,15 @@ const FAULT_VALUE = 4;
 
 module.exports = class zoneDriver extends mainDriver {
   /**
-   * @description Pairing: the HVAC Controller must exist; members are picked in the members view.
+   * @description Pairing: the HVAC Controller must exist; page "select" picks the devices per room, page "configure" sets them up.
    */
   async onPair(session) {
+    const state = { name: null, members: [], candidates: null };
     session.setHandler('check_controller', async () => {
       this.homey.app.getController();
       return true;
     });
-    session.setHandler('get_candidates', async () => this.homey.app.members.candidates());
+    this.setSelectionHandlers(session, state);
     session.setHandler('create_zone', async ({ name, members }) => {
       this.homey.app.getController();
       return {
@@ -26,12 +27,44 @@ module.exports = class zoneDriver extends mainDriver {
   }
 
   /**
-   * @description Repair: edit the member list of a running zone.
+   * @description Repair: edit the members of a running zone with the same two pages.
    */
   async onRepair(session, device) {
-    session.setHandler('get_members', async () => device.getStoreValue('members') || []);
-    session.setHandler('get_candidates', async () => this.homey.app.members.candidates());
+    const state = { name: null, members: device.getStoreValue('members') || [], candidates: null };
+    this.setSelectionHandlers(session, state);
     session.setHandler('save_members', async ({ members }) => device.onRepairMembers(await this.prepareMembers(members)));
+  }
+
+  /**
+   * @description Session handlers shared by pair and repair: the selection is kept between the two pages.
+   */
+  setSelectionHandlers(session, state) {
+    session.setHandler('get_selection', async () => {
+      if (!state.candidates) state.candidates = await this.homey.app.members.candidates();
+      return state;
+    });
+    // Every change on either page is saved here, so Homey's Continue and Previous buttons lose nothing.
+    session.setHandler('select', async ({ name, members }) => {
+      // Keep the configuration of devices that stay picked.
+      const previous = Object.fromEntries(state.members.map((member) => [member.id, member]));
+      state.members = members.map((member) => ({ ...previous[member.id], ...member }));
+      if (name !== null && name !== undefined) state.name = name;
+      return true;
+    });
+    session.setHandler('check_selection', async () => {
+      this.checkSelection(state.members, state.candidates || []);
+      return true;
+    });
+  }
+
+  /**
+   * @description At least one controlled device; relays need a temperature sensor.
+   */
+  checkSelection(members, candidates) {
+    const byId = Object.fromEntries(candidates.map((device) => [device.id, device]));
+    if (!members.some((member) => member.control)) throw new Error(this.homey.__('pair.members.error_no_control'));
+    const hasTemperature = members.some((member) => member.sensor && byId[member.id] && byId[member.id].temperature);
+    if (members.some((member) => member.control === 'relay') && !hasTemperature) throw new Error(this.homey.__('pair.members.error_relay_sensor'));
   }
 
   /**
@@ -53,7 +86,6 @@ module.exports = class zoneDriver extends mainDriver {
           temperature: device.temperature,
           humidity: device.humidity,
           step: [1, 0.5, 0.1].includes(member.step) ? member.step : options.step,
-          offset: Math.min(5, Math.max(-5, Number(member.offset) || 0)),
           min: options.min,
           max: options.max,
           faultValue: FAULT_VALUE,
@@ -63,10 +95,7 @@ module.exports = class zoneDriver extends mainDriver {
         };
       });
 
-    if (!members.some((member) => member.control)) throw new Error(this.homey.__('pair.members.error_no_control'));
-    if (members.some((member) => member.control === 'relay') && !members.some((member) => member.sensor && member.temperature)) {
-      throw new Error(this.homey.__('pair.members.error_relay_sensor'));
-    }
+    this.checkSelection(members, Object.values(candidates));
     return members;
   }
 };

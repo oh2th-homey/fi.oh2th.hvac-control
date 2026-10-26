@@ -5,8 +5,6 @@
   "class": "thermostat",
   "capabilities": [
     "target_temperature",
-    "target_temperature.heat",
-    "target_temperature.cool",
     "num_setback",
     "measure_temperature.set_target",
     "measure_temperature",
@@ -20,28 +18,10 @@
   "capabilitiesOptions": {
     "target_temperature": {
       "title": {
-        "en": "Comfort"
-      },
-      "min": 5,
-      "max": 32,
-      "step": 0.5,
-      "decimals": 1
-    },
-    "target_temperature.heat": {
-      "title": {
         "en": "Comfort heat"
       },
       "min": 5,
       "max": 30,
-      "step": 0.5,
-      "decimals": 1
-    },
-    "target_temperature.cool": {
-      "title": {
-        "en": "Comfort cool"
-      },
-      "min": 16,
-      "max": 32,
       "step": 0.5,
       "decimals": 1
     },
@@ -67,12 +47,30 @@
   ],
   "pair": [
     {
-      "id": "members"
+      "id": "select",
+      "navigation": {
+        "next": "configure"
+      }
+    },
+    {
+      "id": "configure",
+      "navigation": {
+        "prev": "select"
+      }
     }
   ],
   "repair": [
     {
-      "id": "members"
+      "id": "select",
+      "navigation": {
+        "next": "configure"
+      }
+    },
+    {
+      "id": "configure",
+      "navigation": {
+        "prev": "select"
+      }
     }
   ],
   "settings": [
@@ -82,6 +80,17 @@
         "en": "Zone"
       },
       "children": [
+        {
+          "id": "has_cooling",
+          "type": "checkbox",
+          "label": {
+            "en": "Has cooling"
+          },
+          "value": false,
+          "hint": {
+            "en": "The zone has cooling, for example an air conditioner or air-to-air heat pump. Shows the Comfort cool setpoint. Without cooling, the zone's members are off in the cooling season."
+          }
+        },
         {
           "id": "occupancy_rule",
           "type": "dropdown",
@@ -108,20 +117,20 @@
           ]
         },
         {
-          "id": "frost_floor",
+          "id": "low_temp_alarm",
           "type": "number",
           "label": {
-            "en": "Frost protection"
+            "en": "Low temperature alarm"
           },
-          "value": 8,
-          "min": 5,
-          "max": 15,
+          "value": 5,
+          "min": 0,
+          "max": 20,
           "step": 0.5,
           "units": {
             "en": "°C"
           },
           "hint": {
-            "en": "Never heat below this, also in long absence, off and manual."
+            "en": "Zone problem alarm when the zone temperature falls below this, in every mode. The app does not heat for it. 0: no alarm."
           }
         },
         {
@@ -240,15 +249,15 @@
           "label": {
             "en": "Sensor timeout"
           },
-          "value": 120,
-          "min": 10,
+          "value": 0,
+          "min": 0,
           "max": 1440,
           "step": 10,
           "units": {
             "en": "min"
           },
           "hint": {
-            "en": "A climate sensor reading older than this is ignored."
+            "en": "A climate sensor is used while it is available in Homey. Optionally also ignore a reading not updated for this long. 0: off, for sensors that only report changes or are set by flows."
           }
         }
       ]

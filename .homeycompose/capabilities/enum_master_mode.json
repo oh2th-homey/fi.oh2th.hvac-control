@@ -4,7 +4,7 @@
     "en": "Mode"
   },
   "hint": {
-    "en": "Auto: zones follow occupancy and prices. Long absence: everyone away for days, frost protection only, no cooling. Off: zones stop controlling, frost protection only."
+    "en": "Auto: zones follow occupancy and prices. Long absence: everyone away for days, zones at eco and no cooling. Off: zones stop heating and cooling."
   },
   "values": [
     {
@@ -28,5 +28,6 @@
   ],
   "getable": true,
   "setable": true,
-  "uiComponent": "picker"
+  "uiComponent": "picker",
+  "icon": "./assets/capabilities/enum_master_mode.svg"
 }

@@ -15,5 +15,6 @@
   },
   "insightsTitleFalse": {
     "en": "Eco ended"
-  }
+  },
+  "icon": "./assets/capabilities/is_eco.svg"
 }

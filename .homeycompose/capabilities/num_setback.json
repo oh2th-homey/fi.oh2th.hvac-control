@@ -16,5 +16,6 @@
   "getable": true,
   "setable": true,
   "uiComponent": "slider",
-  "insights": true
+  "insights": true,
+  "icon": "./assets/capabilities/num_setback.svg"
 }

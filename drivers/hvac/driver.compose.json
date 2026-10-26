@@ -177,7 +177,7 @@
           },
           "value": "",
           "hint": {
-            "en": "Last day of a long absence (everyone away for days) as YYYY-MM-DD. While set, the mode is Long absence: frost protection only, no cooling. After this day it returns to Auto. Empty: no end date."
+            "en": "Last day of a long absence (everyone away for days) as YYYY-MM-DD. While set, the mode is Long absence: zones at eco, no cooling. After this day it returns to Auto. Empty: no end date."
           }
         }
       ]

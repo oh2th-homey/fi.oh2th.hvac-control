@@ -10,13 +10,28 @@ module.exports = class mainDevice extends Device {
   async onInit() {
     this.log(`${this.getName()} - onInit`);
     this.timeouts = {};
+    this.initializing = true;
     await this.setUnavailable(this.homey.__('device.initializing')).catch(this.error);
 
     await this.onInitDevice();
-    await checkCapabilities(this);
+    await this.checkCapabilities();
     await this.setCapabilityListeners();
     await this.setCapabilityValues(true);
     await this.setAvailable().catch(this.error);
+    this.initializing = false;
+    await this.onReady();
+  }
+
+  /**
+   * onReady is called once init is done and the device is available; override when needed.
+   */
+  async onReady() {}
+
+  /**
+   * @description Match the device's capabilities to the driver manifest; override for optional capabilities.
+   */
+  async checkCapabilities() {
+    return checkCapabilities(this);
   }
 
   /**

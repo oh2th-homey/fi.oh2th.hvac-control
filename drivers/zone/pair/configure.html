@@ -1,0 +1,135 @@
+<!-- Page 2: configure the picked devices and save. Homey's own Previous button goes back to page 1; changes are
+     saved to the session at once. drivers/zone/repair/configure.html is a copy with REPAIR = true. -->
+<style>
+  .hz-sensors { margin: 1em 0; }
+  .hz-error { color: var(--homey-color-red-500, #d33); margin: 0.8em 0; }
+</style>
+
+<header class="homey-header">
+  <h1 class="homey-title" data-i18n="pair.members.title_configure"></h1>
+  <p class="homey-subtitle" data-i18n="pair.members.subtitle_configure"></p>
+</header>
+
+<form class="homey-form" onsubmit="return false">
+  <div id="cfg-list"></div>
+  <p class="hz-sensors" id="cfg-sensors"></p>
+  <p class="hz-error" id="cfg-error"></p>
+  <button class="homey-button-primary-full" id="cfg-save" data-i18n="pair.members.save"></button>
+</form>
+
+<script type="application/javascript">
+  (function () {
+    // Own scope: Homey loads pairing views into one document, so top-level const/let would clash between pages.
+    const REPAIR = false;
+    const list = document.getElementById('cfg-list');
+    const errorEl = document.getElementById('cfg-error');
+    const saveEl = document.getElementById('cfg-save');
+    let selection = { name: null, members: [], candidates: [] };
+
+    function t(key) {
+      return Homey.__(`pair.members.${key}`);
+    }
+
+    function el(tag, attrs = {}, children = []) {
+      const node = document.createElement(tag);
+      for (const [key, value] of Object.entries(attrs)) {
+        if (key === 'text') node.textContent = value;
+        else if (key === 'checked') node.checked = value;
+        else node.setAttribute(key, value);
+      }
+      for (const child of children) node.appendChild(child);
+      return node;
+    }
+
+    function selectGroup(id, label, values, selected) {
+      const select = el('select', { class: 'homey-form-select', id });
+      for (const [value, text] of values) select.appendChild(el('option', { value: String(value), text }));
+      select.value = String(selected);
+      return el('div', { class: 'homey-form-group' }, [el('label', { class: 'homey-form-label', for: id, text: label }), select]);
+    }
+
+    function checkboxGroup(id, text, checked) {
+      return el('div', { class: 'homey-form-group' }, [
+        el('label', { class: 'homey-form-checkbox' }, [
+          el('input', { class: 'homey-form-checkbox-input', type: 'checkbox', id, checked }),
+          el('span', { class: 'homey-form-checkbox-checkmark' }),
+          el('span', { class: 'homey-form-checkbox-text', text })
+        ])
+      ]);
+    }
+
+    function defaultStep(device) {
+      if (device.options.step >= 1) return 1;
+      return device.options.step >= 0.5 ? 0.5 : 0.1;
+    }
+
+    function render() {
+      list.innerHTML = '';
+      const devices = Object.fromEntries(selection.candidates.map((device) => [device.id, device]));
+      for (const member of selection.members.filter((m) => m.control && devices[m.id])) {
+        const device = devices[member.id];
+        const fieldset = el('fieldset', { class: 'homey-form-fieldset' }, [el('legend', { class: 'homey-form-legend', text: `${device.name} · ${t(member.control)}` })]);
+        if (member.control === 'thermostat' || member.control === 'ac') {
+          fieldset.appendChild(selectGroup(`step-${member.id}`, t('step'), [[1, '1 °C'], [0.5, '0.5 °C'], [0.1, '0.1 °C']], member.step || defaultStep(device)));
+        }
+        if (member.control === 'ac' && device.options.modes.includes('fan')) {
+          fieldset.appendChild(selectGroup(`eco-${member.id}`, t('eco'), [['setback', t('eco_setback')], ['fan', t('eco_fan')]], member.ecoMode || 'setback'));
+        }
+        if (member.control === 'relay') fieldset.appendChild(checkboxGroup(`inv-${member.id}`, t('invert'), !!member.invert));
+        list.appendChild(fieldset);
+      }
+      const sensors = selection.members.filter((m) => m.sensor && devices[m.id]).map((m) => devices[m.id].name);
+      document.getElementById('cfg-sensors').textContent = sensors.length ? `${t('sensors_picked')}: ${sensors.join(', ')}` : '';
+    }
+
+    function collect() {
+      return selection.members.map((member) => {
+        const step = document.getElementById(`step-${member.id}`);
+        const eco = document.getElementById(`eco-${member.id}`);
+        const invert = document.getElementById(`inv-${member.id}`);
+        return {
+          ...member,
+          step: step ? Number(step.value) : member.step || null,
+          ecoMode: eco ? eco.value : member.ecoMode || 'setback',
+          invert: invert ? invert.checked : !!member.invert
+        };
+      });
+    }
+
+    list.addEventListener('change', () => {
+      Homey.emit('select', { name: selection.name, members: collect() }).catch(() => {});
+    });
+
+    saveEl.addEventListener('click', async () => {
+      errorEl.textContent = '';
+      try {
+        const members = collect();
+        if (REPAIR) {
+          await Homey.emit('save_members', { members });
+          Homey.done();
+          return;
+        }
+        const device = await Homey.emit('create_zone', { name: selection.name, members });
+        await Homey.createDevice(device);
+        Homey.done();
+      } catch (error) {
+        errorEl.textContent = error.message || String(error);
+      }
+    });
+
+    Homey.showLoadingOverlay();
+    (async () => {
+      try {
+        selection = await Homey.emit('get_selection');
+        render();
+        // At least one controlled device, relays need a temperature sensor: tell now, before Save.
+        await Homey.emit('check_selection');
+      } catch (error) {
+        errorEl.textContent = error.message || String(error);
+        saveEl.disabled = true;
+      } finally {
+        Homey.hideLoadingOverlay();
+      }
+    })();
+  })();
+</script>
