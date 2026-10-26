@@ -432,14 +432,17 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   async applyMode(member, mode) {
+    const st = this.state(member);
     const reading = this.members.read(member.id, 'thermostat_mode');
-    if (reading && reading.value === mode) return;
+    // Skip only when both our last write and the report agree: a stale realtime value alone must not block a change.
+    if (st.mode === mode && reading && reading.value === mode) return;
     if (!(member.modes || []).includes(mode)) {
       this.issue(member, 'mode_missing', { mode }, true);
       return;
     }
-    this.log(`${this.getName()} - applyMode - ${member.name}: ${reading ? reading.value : '?'} => ${mode}`);
+    this.log(`${this.getName()} - applyMode - ${member.name}: ${reading ? reading.value : '?'} (last written ${st.mode || '-'}) => ${mode}`);
     await this.members.write(member.id, 'thermostat_mode', mode);
+    st.mode = mode;
   }
 
   /**
