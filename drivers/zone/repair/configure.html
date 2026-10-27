@@ -2,6 +2,8 @@
      saved to the session at once. Repair copy of drivers/zone/pair/configure.html with REPAIR = true. -->
 <style>
   .hz-sensors { margin: 1em 0; }
+  .hz-preview { margin: 0.2em 0; font-weight: bold; }
+  .hz-hint { margin: 0.2em 0 0.8em; font-size: 0.85em; opacity: 0.7; }
   .hz-error { color: var(--homey-color-red-500, #d33); margin: 0.8em 0; }
 </style>
 
@@ -58,6 +60,29 @@
       ]);
     }
 
+    function numberGroup(id, label, value) {
+      return el('div', { class: 'homey-form-group' }, [
+        el('label', { class: 'homey-form-label', for: id, text: label }),
+        el('input', { class: 'homey-form-input', type: 'text', inputmode: 'decimal', id, value: String(value) })
+      ]);
+    }
+
+    // Accepts both decimal separators ("0,5" and "0.5"); anything else is NaN, never a silent 0.
+    function decimal(text) {
+      const value = String(text).trim().replace(',', '.').replace('−', '-');
+      return /^-?(\d+(\.\d+)?|\.\d+)$/.test(value) ? Number(value) : NaN;
+    }
+
+    // Preview of the relay band for a 21 °C example target, so the two numbers are easy to read.
+    function relayPreview(memberId) {
+      const on = decimal(document.getElementById(`ron-${memberId}`).value);
+      const off = decimal(document.getElementById(`roff-${memberId}`).value);
+      const target = 21;
+      const show = (value) => (Number.isFinite(value) ? value.toFixed(1) : '—');
+      const text = Homey.__('pair.members.relay_preview', { target, on: show(target - on), off: show(target + off) });
+      document.getElementById(`rprev-${memberId}`).textContent = text;
+    }
+
     function defaultStep(device) {
       if (device.options.step >= 1) return 1;
       return device.options.step >= 0.5 ? 0.5 : 0.1;
@@ -75,8 +100,15 @@
         if (member.control === 'ac' && device.options.modes.includes('fan')) {
           fieldset.appendChild(selectGroup(`eco-${member.id}`, t('eco'), [['setback', t('eco_setback')], ['fan', t('eco_fan')]], member.ecoMode || 'setback'));
         }
-        if (member.control === 'relay') fieldset.appendChild(checkboxGroup(`inv-${member.id}`, t('invert'), !!member.invert));
+        if (member.control === 'relay') {
+          fieldset.appendChild(numberGroup(`ron-${member.id}`, t('relay_on'), typeof member.relayOnBelow === 'number' ? member.relayOnBelow : 0.3));
+          fieldset.appendChild(numberGroup(`roff-${member.id}`, t('relay_off'), typeof member.relayOffAt === 'number' ? member.relayOffAt : 0.3));
+          fieldset.appendChild(el('p', { class: 'hz-preview', id: `rprev-${member.id}` }));
+          fieldset.appendChild(el('p', { class: 'hz-hint', text: t('relay_band_hint') }));
+          fieldset.appendChild(checkboxGroup(`inv-${member.id}`, t('invert'), !!member.invert));
+        }
         list.appendChild(fieldset);
+        if (member.control === 'relay') relayPreview(member.id);
       }
       const sensors = selection.members.filter((m) => m.sensor && devices[m.id]).map((m) => devices[m.id].name);
       document.getElementById('cfg-sensors').textContent = sensors.length ? `${t('sensors_picked')}: ${sensors.join(', ')}` : '';
@@ -87,14 +119,23 @@
         const step = document.getElementById(`step-${member.id}`);
         const eco = document.getElementById(`eco-${member.id}`);
         const invert = document.getElementById(`inv-${member.id}`);
+        const relayOn = document.getElementById(`ron-${member.id}`);
+        const relayOff = document.getElementById(`roff-${member.id}`);
         return {
           ...member,
+          relayOnBelow: relayOn ? decimal(relayOn.value) : member.relayOnBelow,
+          relayOffAt: relayOff ? decimal(relayOff.value) : member.relayOffAt,
           step: step ? Number(step.value) : member.step || null,
           ecoMode: eco ? eco.value : member.ecoMode || 'setback',
           invert: invert ? invert.checked : !!member.invert
         };
       });
     }
+
+    list.addEventListener('input', (event) => {
+      const match = /^r(?:on|off)-(.+)$/.exec(event.target.id || '');
+      if (match) relayPreview(match[1]);
+    });
 
     list.addEventListener('change', () => {
       Homey.emit('select', { name: selection.name, members: collect() }).catch(() => {});

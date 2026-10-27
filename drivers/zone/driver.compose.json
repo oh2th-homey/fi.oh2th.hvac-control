@@ -168,6 +168,23 @@
           "hint": {
             "en": "How long boost lasts when started from the device or without a time."
           }
+        },
+        {
+          "id": "window_delay_minutes",
+          "type": "number",
+          "label": {
+            "en": "Window open delay"
+          },
+          "value": 2,
+          "min": 0,
+          "max": 30,
+          "step": 1,
+          "units": {
+            "en": "min"
+          },
+          "hint": {
+            "en": "Eco when a linked door or window has been open this long."
+          }
         }
       ]
     },
@@ -209,23 +226,6 @@
           },
           "hint": {
             "en": "A thermostat moves to the next step only when the target passes the midpoint by this much."
-          }
-        },
-        {
-          "id": "relay_hysteresis",
-          "type": "number",
-          "label": {
-            "en": "Relay hysteresis"
-          },
-          "value": 0.3,
-          "min": 0.1,
-          "max": 2,
-          "step": 0.1,
-          "units": {
-            "en": "°C"
-          },
-          "hint": {
-            "en": "On/off relays switch on below target minus this and off above target plus this."
           }
         },
         {

@@ -14,9 +14,8 @@
       "thermostat": "Thermostat",
       "ac": "Air conditioner",
       "relay": "Relay",
-      "sensor": "Sensor",
       "title_configure": "Configure devices",
-      "subtitle_configure": "Step: the setpoint step the device really accepts. Eco: lower setpoint or fan mode for air conditioners. Inverted: for relays where off means heating.",
+      "subtitle_configure": "Set the step, eco mode or relay band of each device.",
       "step": "Step",
       "eco": "Eco",
       "eco_setback": "Setback",
@@ -25,7 +24,16 @@
       "sensors_picked": "Sensors",
       "save": "Save",
       "error_no_control": "Choose at least one thermostat, air conditioner or relay to control.",
-      "error_relay_sensor": "A zone with relays needs at least one temperature sensor."
+      "error_relay_sensor": "A zone with relays needs at least one temperature sensor.",
+      "relay_on": "On below target by (°C)",
+      "relay_off": "Off at target plus (°C)",
+      "relay_preview": "Target __target__ °C: on at __on__ °C, off at __off__ °C.",
+      "relay_band_hint": "Negative off value: off below the target. Extra heat example: on 1.0, off −0.5.",
+      "error_relay_band": "__name__: the off temperature must be above the on temperature.",
+      "sensor_temperature": "Temperature sensor",
+      "sensor_humidity": "Humidity sensor",
+      "sensor_both": "Temperature and humidity sensor",
+      "contact": "Window/door"
     }
   },
   "error": {
@@ -89,7 +97,8 @@
     "setback_zero": "setback is 0, so eco equals comfort",
     "no_cooling": "Cooling season, but this zone has no cooling: members off",
     "low_temperature": "Low temperature alarm: __temperature__ °C is below __limit__ °C",
-    "long_absence_cooling": "Long absence: no cooling, members off"
+    "long_absence_cooling": "Long absence: no cooling, members off",
+    "window_open": "Window open: eco"
   },
   "member": {
     "heating_device_cooling": "heating device, off while cooling",

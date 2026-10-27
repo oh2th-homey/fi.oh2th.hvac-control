@@ -2,6 +2,7 @@
 
 const crypto = require('crypto');
 const mainDriver = require('../main-driver');
+const pipeline = require('../../lib/pipeline');
 
 const FAULT_VALUE = 4;
 
@@ -83,6 +84,7 @@ module.exports = class zoneDriver extends mainDriver {
           name: device.name,
           control: ['thermostat', 'ac', 'relay'].includes(member.control) ? member.control : null,
           sensor: !!member.sensor && (device.temperature || device.humidity),
+          contact: !!member.contact && device.contact,
           temperature: device.temperature,
           humidity: device.humidity,
           step: [1, 0.5, 0.1].includes(member.step) ? member.step : options.step,
@@ -91,11 +93,16 @@ module.exports = class zoneDriver extends mainDriver {
           faultValue: FAULT_VALUE,
           modes: options.modes,
           ecoMode: member.ecoMode === 'fan' && options.modes.includes('fan') ? 'fan' : 'setback',
-          invert: !!member.invert
+          invert: !!member.invert,
+          // A band never set gets the default; an unreadable one (null after JSON) stays invalid and is refused below.
+          relayOnBelow: member.relayOnBelow === undefined ? pipeline.RELAY_ON_BELOW : Number(member.relayOnBelow ?? NaN),
+          relayOffAt: member.relayOffAt === undefined ? pipeline.RELAY_OFF_AT : Number(member.relayOffAt ?? NaN)
         };
       });
 
     this.checkSelection(members, Object.values(candidates));
+    const badBand = members.find((member) => member.control === 'relay' && !pipeline.validRelayBand(member.relayOnBelow, member.relayOffAt));
+    if (badBand) throw new Error(this.homey.__('pair.members.error_relay_band', { name: badBand.name }));
     return members;
   }
 };

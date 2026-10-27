@@ -55,17 +55,24 @@ them later with **Repair** in the zone's device settings, which shows the same t
 
 ## Zone members
 
-- **Controlled devices**: thermostats (any device with a settable target temperature), on/off
+- **Controlled devices**: thermostats (any device with a settable target temperature; one that
+  also has an on/off switch, such as a heater with its own thermostat, is switched on when the zone
+  heats and off when it is off), on/off
   relays and smart plugs, and air conditioners / air-to-air heat pumps (heat, cool, off, and
   fan mode when the device offers it)
 - **Climate sensors**: temperature and humidity sensors; the zone uses the average of the
   sensors that are available in Homey
+- **Windows and doors**: contact sensors; the zone goes to eco while one is open
 
 Per device, when picking members:
 
 - **Step**: the setpoint step the device really accepts (1, 0.5 or 0.1 °C). Some thermostats
   claim 0.5 but only take whole degrees; the app also learns this from what the device reports.
 - **Eco** (air conditioners with a fan mode): setback (lower setpoint) or fan mode.
+- **Relay band** (relays): **On below target by** and **Off at target plus**, in °C. Default 0.3
+  and 0.3: on at 20.7 °C and off at 21.3 °C with a 21 °C target. A negative off value switches off
+  below the target, for a heater that should only help the main heating: on 1.0, off −0.5 gives
+  on at 20.0 °C and off at 20.5 °C.
 - **Inverted** (relays): for wiring where relay off means heating.
 
 Setpoints are always rounded to what each device accepts and kept within its own limits, so
@@ -161,8 +168,8 @@ anything else that should follow the price, such as a water heater.
 
 1. Add a Heating Zone and pick the plug or relay as **Relay** and a temperature sensor in the
    same room as **Sensor**. A zone with relays needs at least one temperature sensor.
-2. The zone switches the relay on below target minus the **Relay hysteresis** (default 0.3 °C)
-   and off above target plus it, with a **minimum on and off time** (default 5 minutes).
+2. The zone switches the relay by its **relay band** (configure page: on below target by, off at
+   target plus; default 0.3 / 0.3), with a **minimum on and off time** (default 5 minutes).
 3. Without a temperature from an available sensor, the relay stays off and the zone shows a
    problem. A sensor that only reports when its value changes is fine; set **Sensor timeout**
    only if you want old readings ignored.
@@ -181,6 +188,13 @@ Wiring where relay off means heating: tick **Inverted** for that relay on the co
 
 If your air conditioner app keeps fan mode in its own flow cards only, use the zone trigger
 **Eco changed** to run that card yourself.
+
+### Save heat while a window is open
+
+Pick the window or door contact as **Window/door** in the zone. When it has been open for the
+**Window open delay** (zone setting, default 2 minutes), the zone goes to eco; when all its
+windows and doors are closed it returns at once. An open window also ends the effect of boost
+while it is open. To be notified, use the zone's **Eco changed** trigger.
 
 ### Boost a room for a while
 

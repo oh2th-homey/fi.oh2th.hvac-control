@@ -61,6 +61,14 @@ test('manual: hands off; low temperature alarm in every mode, no heating', () =>
   assert.strictEqual(decide({}, { lowAlarm: 0 }, { temperature: 1 }).lowTemperature, false);
 });
 
+test('window open: eco, overrides boost and comfort, not off or manual', () => {
+  const open = decide({}, { windowOpen: true, boostUntil: NOW + 60000 });
+  assert.deepStrictEqual([open.aim, open.target, open.eco, open.reasons.at(-1).code], ['eco', 19, true, 'window_open']);
+  assert.strictEqual(decide({ season: 'cooling' }, { windowOpen: true }).target, 26);
+  assert.strictEqual(decide({}, { windowOpen: true, mode: 'off' }).aim, 'off');
+  assert.strictEqual(decide({}, { windowOpen: true, mode: 'manual' }).aim, 'manual');
+});
+
 test('boost until a time, then normal; not in manual or off', () => {
   assert.strictEqual(decide({}, { mode: 'manual', boostUntil: NOW + 60000 }).aim, 'manual');
   assert.strictEqual(decide({}, { mode: 'off', boostUntil: NOW + 60000 }).aim, 'off');
@@ -121,19 +129,61 @@ test('report classification: fault, ok, rounding, hand', () => {
   assert.strictEqual(pipeline.classifyReport(3, 21, m), 'fault');
   assert.strictEqual(pipeline.classifyReport(21, 21, m), 'ok');
   assert.strictEqual(pipeline.classifyReport(20.5, 21, m), 'rounding');
+  // Step 0.5 declared, the device only keeps whole degrees: 21.5 comes back as 22 or 21.
+  const half = { ...m, step: 0.5 };
+  assert.strictEqual(pipeline.classifyReport(22, 21.5, half), 'whole_degree');
+  assert.strictEqual(pipeline.classifyReport(21, 21.5, half), 'whole_degree');
+  assert.strictEqual(pipeline.classifyReport(21.2, 21.5, { ...m, step: 0.1 }), 'hand');
+  assert.strictEqual(pipeline.classifyReport(23, 21.5, half), 'hand');
   assert.strictEqual(pipeline.classifyReport(23, 21, m), 'hand');
   assert.strictEqual(pipeline.classifyReport(null, 21, m), 'unknown');
 });
 
-test('relay: hysteresis, min on/off, no temperature', () => {
-  const base = { target: 21, hysteresis: 0.3, now: NOW, lastSwitchAt: 0 };
-  assert.strictEqual(pipeline.relay({ ...base, on: false, temperature: 20.6 }).on, true);
+test('relay: default band, min on/off, no temperature', () => {
+  const base = { target: 21, now: NOW, lastSwitchAt: 0 };
+  assert.strictEqual(pipeline.relay({ ...base, on: false, temperature: 20.7 }).on, true);
   assert.strictEqual(pipeline.relay({ ...base, on: false, temperature: 20.9 }).on, false);
   assert.strictEqual(pipeline.relay({ ...base, on: true, temperature: 20.9 }).on, true);
-  assert.strictEqual(pipeline.relay({ ...base, on: true, temperature: 21.4 }).on, false);
+  assert.strictEqual(pipeline.relay({ ...base, on: true, temperature: 21.3 }).on, false);
   assert.strictEqual(pipeline.relay({ ...base, on: true, temperature: 21.4, minOnMs: 300000, lastSwitchAt: NOW - 60000 }).on, true);
   assert.strictEqual(pipeline.relay({ ...base, on: true, temperature: null }).on, false);
   assert.strictEqual(pipeline.relay({ ...base, on: false, temperature: 21.4, heating: false }).on, true);
+});
+
+test('relay band: asymmetric and extra heat below the target', () => {
+  // WC: on 0.5 below, off 0.2 above.
+  const wc = { target: 21, onBelow: 0.5, offAt: 0.2, now: NOW };
+  assert.strictEqual(pipeline.relay({ ...wc, on: false, temperature: 20.6 }).on, false);
+  assert.strictEqual(pipeline.relay({ ...wc, on: false, temperature: 20.5 }).on, true);
+  assert.strictEqual(pipeline.relay({ ...wc, on: true, temperature: 21.1 }).on, true);
+  assert.strictEqual(pipeline.relay({ ...wc, on: true, temperature: 21.2 }).on, false);
+  // Bedroom extra heat: on 1.0 below, off 0.5 below the target.
+  const bed = { target: 21, onBelow: 1, offAt: -0.5, now: NOW };
+  assert.strictEqual(pipeline.relay({ ...bed, on: false, temperature: 20.2 }).on, false);
+  assert.strictEqual(pipeline.relay({ ...bed, on: false, temperature: 20 }).on, true);
+  assert.strictEqual(pipeline.relay({ ...bed, on: true, temperature: 20.4 }).on, true);
+  assert.strictEqual(pipeline.relay({ ...bed, on: true, temperature: 20.5 }).on, false);
+});
+
+test('relay band validation: off must be above on', () => {
+  assert.strictEqual(pipeline.validRelayBand(0.3, 0.3), true);
+  assert.strictEqual(pipeline.validRelayBand(1, -0.5), true);
+  assert.strictEqual(pipeline.validRelayBand(0.5, -0.5), false);
+  assert.strictEqual(pipeline.validRelayBand(-0.1, 0.3), false);
+  assert.strictEqual(pipeline.validRelayBand(NaN, 0.3), false);
+});
+
+test('memberPlan: thermostat with onoff is switched on when heating, off otherwise', () => {
+  const heater = { control: 'thermostat', min: 5, hasOnoff: true };
+  const heat = pipeline.memberPlan(decide(), heater);
+  assert.deepStrictEqual([heat.power, heat.decision.target], [true, 21]);
+  const eco = pipeline.memberPlan(decide({ occupancy: 'away' }), heater);
+  assert.deepStrictEqual([eco.power, eco.decision.target], [true, 19]);
+  const off = pipeline.memberPlan(decide({}, { mode: 'off' }), heater);
+  assert.deepStrictEqual([off.power, off.decision], [false, null]);
+  const summer = pipeline.memberPlan(decide({ season: 'cooling' }), heater);
+  assert.deepStrictEqual([summer.power, summer.decision, summer.reasons[0].code], [false, null, 'heating_device_cooling']);
+  assert.strictEqual(pipeline.memberPlan(decide(), { control: 'thermostat', min: 5 }).power, null);
 });
 
 test('memberPlan: off, thermostat in cooling, A/C modes and fan eco', () => {

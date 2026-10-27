@@ -236,17 +236,20 @@ module.exports = class zoneDevice extends mainDevice {
     for (const member of this.getMembers()) {
       const caps = [];
       if (member.control === 'thermostat' || member.control === 'ac') caps.push('target_temperature');
+      if (member.control === 'thermostat' && member.hasOnoff !== false) caps.push('onoff');
       if (member.control === 'ac') caps.push('thermostat_mode');
       if (member.control === 'relay') caps.push('onoff');
       if (member.sensor && member.temperature) caps.push('measure_temperature');
       if (member.sensor && member.humidity) caps.push('measure_humidity');
+      if (member.contact) caps.push('alarm_contact');
       for (const cap of caps) {
         const listener = (value) => this.onMemberReport(member, cap, value);
         try {
           await this.members.subscribe(member.id, cap, listener);
           this.subscriptions.push({ id: member.id, cap, listener });
         } catch (error) {
-          this.error(`${this.getName()} - subscribeMembers - ${member.name} ${cap}: ${error}`);
+          // onoff is optional on thermostats; only report other missing capabilities.
+          if (!(cap === 'onoff' && member.control === 'thermostat')) this.error(`${this.getName()} - subscribeMembers - ${member.name} ${cap}: ${error}`);
         }
       }
     }
@@ -274,6 +277,15 @@ module.exports = class zoneDevice extends mainDevice {
       this.updateClimate(Date.now());
       return;
     }
+    if (cap === 'alarm_contact') {
+      // Closed: back at once. Open: eco after the zone's delay (re-checked on every minute tick too).
+      this.log(`${this.getName()} - onMemberReport - ${member.name} ${value ? 'open' : 'closed'}`);
+      const delayMs = this.getSetting('window_delay_minutes') * 60000;
+      if (value) this.setTimer('window', () => this.evaluate({ urgent: true }), delayMs + 1000);
+      else this.clearTimer('window');
+      this.evaluate({ urgent: true }).catch(this.error);
+      return;
+    }
     if (cap !== 'target_temperature') return;
     const st = this.state(member);
     if (typeof st.written !== 'number' || this.getCapabilityValue('enum_zone_mode') === 'manual') return;
@@ -285,6 +297,19 @@ module.exports = class zoneDevice extends mainDevice {
     } else if (kind === 'hand') {
       this.log(`${this.getName()} - onMemberReport - ${member.name} changed by hand to ${value}, restored at the next write window`);
     }
+  }
+
+  /**
+   * @description True when a linked door or window has been open longer than the zone's delay.
+   */
+  windowOpen(ms) {
+    const delayMs = this.getSetting('window_delay_minutes') * 60000;
+    return this.getMembers().some((member) => {
+      if (!member.contact) return false;
+      const reading = this.members.read(member.id, 'alarm_contact');
+      if (!reading || reading.value !== true) return false;
+      return !reading.lastUpdated || ms - reading.lastUpdated.getTime() >= delayMs;
+    });
   }
 
   /**
@@ -340,7 +365,8 @@ module.exports = class zoneDevice extends mainDevice {
         setback: this.getCapabilityValue('num_setback'),
         lowAlarm: this.getSetting('low_temp_alarm'),
         boostDelta: this.getSetting('boost_delta'),
-        occupancyRule: this.getSetting('occupancy_rule')
+        occupancyRule: this.getSetting('occupancy_rule'),
+        windowOpen: this.windowOpen(ms)
       },
       temperature: this.getCapabilityValue('measure_temperature'),
       now: ms
@@ -356,7 +382,8 @@ module.exports = class zoneDevice extends mainDevice {
     const target = round1(decision.target);
     const reason = this.reasonText();
     const changed = target !== null && target !== this.getCapabilityValue('measure_temperature.set_target');
-    if (target !== null) await this.setValue('measure_temperature.set_target', target, firstRun);
+    // No target in manual or when members are off: show none instead of the last one.
+    await this.setValue('measure_temperature.set_target', target, firstRun);
     await this.setValue('is_eco', decision.eco, firstRun);
     await this.setValue('text_reason', reason, firstRun);
     // Only real problems: member write failed, relays without temperature, low temperature, controller missing for over an hour.
@@ -387,12 +414,15 @@ module.exports = class zoneDevice extends mainDevice {
     const holdMs = this.getSetting('hold_minutes') * 60000;
     for (const member of this.getMembers().filter((m) => m.control === 'thermostat' || m.control === 'ac')) {
       try {
-        const plan = pipeline.memberPlan(this.decision, member);
+        // A thermostat with onoff (e.g. a heater with its own thermostat) is switched on and off too.
+        const hasOnoff = member.control === 'thermostat' && this.members.read(member.id, 'onoff') !== null;
+        const plan = pipeline.memberPlan(this.decision, { ...member, hasOnoff });
         if (plan.skip) continue;
         for (const reason of plan.reasons) this.issue(member, reason.code, reason.args);
         const st = this.state(member);
 
         if (plan.mode) await this.applyMode(member, plan.mode);
+        if (plan.power !== null && plan.power !== undefined) await this.applyPower(member, plan.power);
         if (!plan.decision) continue;
 
         if (st.retryAt && ms < st.retryAt) {
@@ -439,6 +469,19 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   /**
+   * @description Switch a thermostat member with onoff on or off. Like the A/C mode, skip only when both the last write
+   * and the report agree, so a stale value or a hand switch-off is corrected.
+   */
+  async applyPower(member, on) {
+    const st = this.state(member);
+    const reading = this.members.read(member.id, 'onoff');
+    if (st.power === on && reading && reading.value === on) return;
+    this.log(`${this.getName()} - applyPower - ${member.name}: ${reading ? reading.value : '?'} (last written ${st.power === undefined ? '-' : st.power}) => ${on}`);
+    await this.members.write(member.id, 'onoff', on);
+    st.power = on;
+  }
+
+  /**
    * @description Write one setpoint and verify the report after VERIFY_MS.
    */
   async writeSetpoint(member, value, ms, retry = false) {
@@ -466,10 +509,11 @@ module.exports = class zoneDevice extends mainDevice {
       await this.saveMemberState();
       return;
     }
-    if (kind === 'rounding') {
-      if (member.step < 1 && Number.isInteger(reading.value)) await this.learnStep(member, reading.value, value);
+    if (kind === 'whole_degree') {
+      if (member.step < 1) await this.learnStep(member, reading.value, value);
       return;
     }
+    if (kind === 'rounding') return;
     if (!retry && Number.isInteger(Math.round(value)) && pipeline.valid(Math.round(value), member)) {
       await this.writeSetpoint(member, Math.round(value), Date.now(), true);
       return;
@@ -521,7 +565,8 @@ module.exports = class zoneDevice extends mainDevice {
           temperature: this.getCapabilityValue('measure_temperature'),
           target,
           heating: true,
-          hysteresis: settings.relay_hysteresis,
+          onBelow: typeof member.relayOnBelow === 'number' ? member.relayOnBelow : pipeline.RELAY_ON_BELOW,
+          offAt: typeof member.relayOffAt === 'number' ? member.relayOffAt : pipeline.RELAY_OFF_AT,
           minOnMs: minMs,
           minOffMs: minMs,
           lastSwitchAt: st.switchedAt || 0,
