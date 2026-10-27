@@ -106,6 +106,7 @@
         if (member.control === 'ac' && device.options.modes.includes('fan')) {
           fieldset.appendChild(selectGroup(`eco-${member.id}`, t('eco'), [['setback', t('eco_setback')], ['fan', t('eco_fan')]], member.ecoMode || 'setback'));
           fieldset.appendChild(selectGroup(`soff-${member.id}`, t('season_off'), [['off', t('season_off_off')], ['fan', t('eco_fan')]], member.seasonOffMode || 'off'));
+          fieldset.appendChild(el('p', { class: 'hz-hint', text: t('season_off_hint') }));
         }
         if (member.control === 'relay') {
           fieldset.appendChild(selectGroup(`rmode-${member.id}`, t('relay_mode'), [['thermostat', t('relay_mode_thermostat')], ['enable', t('relay_mode_enable')]], member.relayMode || 'thermostat'));

@@ -79,7 +79,7 @@ Per device, when picking members:
 - **Step**: the setpoint step the device really accepts (1, 0.5 or 0.1 °C). Some thermostats
   claim 0.5 but only take whole degrees; the app also learns this from what the device reports.
 - **Eco** (air conditioners with a fan mode): setback (lower setpoint) or fan mode.
-- **When the season is off** (air conditioners with a fan mode): off or fan.
+- **Between seasons** (air conditioners with a fan mode): off or fan while the season is Off.
 - **Relay controls**: room temperature (with the relay band below) or heating on/off, for a
   relay that only enables a heater with its own thermostat (no sensor needed).
 - **Relay band** (relays): **On below target by** and **Off at target plus**, in °C. Default 0.3
@@ -184,6 +184,9 @@ anything else that should follow the price, such as a water heater.
    same room as **Sensor**. A zone with relays needs at least one temperature sensor.
 2. The zone switches the relay by its **relay band** (configure page: on below target by, off at
    target plus; default 0.3 / 0.3), with a **minimum on and off time** (default 5 minutes).
+   The band follows the zone target, so comfort, eco (away, expensive) and boost all apply:
+   when the target drops to eco, the relay cuts the heater until the room cools below it. With
+   **When expensive: Off**, the relay stays off for the whole price peak.
 3. Without a temperature from an available sensor, the relay stays off and the zone shows a
    problem. A sensor that only reports when its value changes is fine; set **Sensor timeout**
    only if you want old readings ignored.

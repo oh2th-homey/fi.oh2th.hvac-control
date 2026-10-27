@@ -37,8 +37,9 @@
       "relay_mode": "Relay controls",
       "relay_mode_thermostat": "Room temperature (band)",
       "relay_mode_enable": "Heating on/off (device has its own thermostat)",
-      "season_off": "When the season is off",
-      "season_off_off": "Off"
+      "season_off": "Between seasons",
+      "season_off_off": "Off",
+      "season_off_hint": "When the season is Off: no heating or cooling."
     }
   },
   "error": {
