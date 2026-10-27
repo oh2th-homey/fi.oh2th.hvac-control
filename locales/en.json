@@ -42,7 +42,8 @@
     "invalid_date": "Enter the date as YYYY-MM-DD",
     "invalid_time": "Enter the time as HH:mm, for example 15:00",
     "date_in_past": "The last day of the long absence is already in the past",
-    "no_cooling": "This zone has no cooling. Turn on Has cooling in the zone settings."
+    "no_cooling": "This zone has no cooling. Turn on Has cooling in the zone settings.",
+    "invalid_currency": "Enter a currency of 1 to 5 characters, for example € or kr."
   },
   "occupancy": {
     "present": "Present",

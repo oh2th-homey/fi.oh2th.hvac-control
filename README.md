@@ -32,6 +32,7 @@ an hour and then fall back to comfort temperatures without price control.
   Off (zones stop heating and cooling)
 - Price model: Rate is highest (short local price peaks), Above average (N % above today's
   average) or Off
+- Currency of the imported prices (default €), shown with the price now, e.g. €/kWh
 - Price resolution: 15 minutes or 60 minutes. Rate is highest needs 15-minute prices; with
   hourly prices the app uses Above average instead.
 
@@ -192,7 +193,7 @@ If your air conditioner app keeps fan mode in its own flow cards only, use the z
 ### Save heat while a window is open
 
 Pick the window or door contact as **Window/door** in the zone. When it has been open for the
-**Window open delay** (zone setting, default 2 minutes), the zone goes to eco; when all its
+**Eco after door/window open** time (zone setting, default 2 minutes), the zone goes to eco; when all its
 windows and doors are closed it returns at once. An open window also ends the effect of boost
 while it is open. To be notified, use the zone's **Eco changed** trigger.
 

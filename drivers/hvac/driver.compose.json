@@ -43,7 +43,7 @@
         "en": "Price now"
       },
       "units": {
-        "en": "/kWh"
+        "en": "€/kWh"
       },
       "decimals": 4,
       "insights": true
@@ -60,6 +60,17 @@
         "en": "Prices"
       },
       "children": [
+        {
+          "id": "currency",
+          "type": "text",
+          "label": {
+            "en": "Currency"
+          },
+          "value": "€",
+          "hint": {
+            "en": "Currency of the imported prices, for example € or kr."
+          }
+        },
         {
           "id": "price_model",
           "type": "dropdown",
@@ -119,7 +130,7 @@
           "max": 1,
           "step": 0.001,
           "units": {
-            "en": "/kWh"
+            "en": "per kWh"
           },
           "hint": {
             "en": "A price must be at least this much above the average or median to count as expensive, so cheap and flat days are not flagged for fractions of a cent."

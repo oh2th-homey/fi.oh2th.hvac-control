@@ -25,6 +25,10 @@ module.exports = class hvacDevice extends mainDevice {
   async onSettings({ oldSettings, newSettings, changedKeys }) {
     this.log(`${this.getName()} - onSettings - changed: ${changedKeys}`);
     if (!TIME_RE.test(newSettings.tomorrow_check_time)) throw new Error(this.homey.__('error.invalid_time'));
+    // Controllers paired before the setting existed have none yet: that means €.
+    const currency = String(newSettings.currency ?? '€').trim();
+    if (currency.length < 1 || currency.length > 5) throw new Error(this.homey.__('error.invalid_currency'));
+    if (changedKeys.includes('currency')) await this.applyCurrency(currency);
     if (newSettings.absence_until !== '' && !isDate(newSettings.absence_until)) throw new Error(this.homey.__('error.invalid_date'));
 
     if (changedKeys.includes('absence_until')) {
@@ -48,8 +52,17 @@ module.exports = class hvacDevice extends mainDevice {
     this.registerCapabilityListener('enum_master_mode', this.onCapability_MASTER_MODE.bind(this));
   }
 
+  /**
+   * @description Price unit from the Currency setting, e.g. "€/kWh" or "kr/kWh".
+   */
+  async applyCurrency(currency = this.getSetting('currency')) {
+    const symbol = String(currency || '€').trim() || '€';
+    await this.setCapabilityOptions('measure_monetary', { units: { en: `${symbol}/kWh` } }).catch(this.error);
+  }
+
   async setCapabilityValues(check = false) {
     try {
+      if (check) await this.applyCurrency();
       if (!OCCUPANCY.includes(this.getCapabilityValue('enum_occupancy'))) await this.setValue('enum_occupancy', 'present', check);
       if (!MODE_SEASON[this.getCapabilityValue('thermostat_mode')]) await this.setValue('thermostat_mode', 'heat', check);
       if (!MASTER_MODES.includes(this.getCapabilityValue('enum_master_mode'))) await this.setValue('enum_master_mode', 'auto', check);

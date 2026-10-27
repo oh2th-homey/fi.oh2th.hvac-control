@@ -846,7 +846,7 @@
             "en": "Price now"
           },
           "units": {
-            "en": "/kWh"
+            "en": "€/kWh"
           },
           "decimals": 4,
           "insights": true
@@ -859,6 +859,17 @@
             "en": "Prices"
           },
           "children": [
+            {
+              "id": "currency",
+              "type": "text",
+              "label": {
+                "en": "Currency"
+              },
+              "value": "€",
+              "hint": {
+                "en": "Currency of the imported prices, for example € or kr."
+              }
+            },
             {
               "id": "price_model",
               "type": "dropdown",
@@ -918,7 +929,7 @@
               "max": 1,
               "step": 0.001,
               "units": {
-                "en": "/kWh"
+                "en": "per kWh"
               },
               "hint": {
                 "en": "A price must be at least this much above the average or median to count as expensive, so cheap and flat days are not flagged for fractions of a cent."
@@ -1164,7 +1175,7 @@
               "id": "window_delay_minutes",
               "type": "number",
               "label": {
-                "en": "Window open delay"
+                "en": "Eco after door/window open"
               },
               "value": 2,
               "min": 0,
@@ -1174,7 +1185,7 @@
                 "en": "min"
               },
               "hint": {
-                "en": "Eco when a linked door or window has been open this long."
+                "en": "How long a linked door or window may be open before the zone goes to eco. 0: at once."
               }
             }
           ]
