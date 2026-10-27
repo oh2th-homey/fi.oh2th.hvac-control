@@ -1,0 +1,45 @@
+{
+  "title": {
+    "en": "Set occupancy rule"
+  },
+  "titleFormatted": {
+    "en": "Set occupancy rule to [[rule]]"
+  },
+  "hint": {
+    "en": "E.g. a guest room: Always eco, Follows home when guests come."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=zone"
+    },
+    {
+      "type": "dropdown",
+      "name": "rule",
+      "title": {
+        "en": "Rule"
+      },
+      "values": [
+        {
+          "id": "follows",
+          "title": {
+            "en": "Follows home"
+          }
+        },
+        {
+          "id": "always_eco",
+          "title": {
+            "en": "Always eco"
+          }
+        },
+        {
+          "id": "always_comfort",
+          "title": {
+            "en": "Always comfort"
+          }
+        }
+      ]
+    }
+  ]
+}

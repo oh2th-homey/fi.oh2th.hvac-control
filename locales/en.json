@@ -24,7 +24,7 @@
       "sensors_picked": "Sensors",
       "save": "Save",
       "error_no_control": "Choose at least one thermostat, air conditioner or relay to control.",
-      "error_relay_sensor": "A zone with relays needs at least one temperature sensor.",
+      "error_relay_sensor": "A relay that switches on the room temperature needs a temperature sensor in the zone.",
       "relay_on": "On below target by (°C)",
       "relay_off": "Off at target plus (°C)",
       "relay_preview": "Target __target__ °C: on at __on__ °C, off at __off__ °C.",
@@ -33,7 +33,12 @@
       "sensor_temperature": "Temperature sensor",
       "sensor_humidity": "Humidity sensor",
       "sensor_both": "Temperature and humidity sensor",
-      "contact": "Window/door"
+      "contact": "Window/door",
+      "relay_mode": "Relay controls",
+      "relay_mode_thermostat": "Room temperature (band)",
+      "relay_mode_enable": "Heating on/off (device has its own thermostat)",
+      "season_off": "When the season is off",
+      "season_off_off": "Off"
     }
   },
   "error": {
@@ -43,7 +48,8 @@
     "invalid_time": "Enter the time as HH:mm, for example 15:00",
     "date_in_past": "The last day of the long absence is already in the past",
     "no_cooling": "This zone has no cooling. Turn on Has cooling in the zone settings.",
-    "invalid_currency": "Enter a currency of 1 to 5 characters, for example € or kr."
+    "invalid_currency": "Enter a currency of 1 to 5 characters, for example € or kr.",
+    "outdoor_limit": "Stop above must be higher than Heat below."
   },
   "occupancy": {
     "present": "Present",
@@ -99,7 +105,10 @@
     "no_cooling": "Cooling season, but this zone has no cooling: members off",
     "low_temperature": "Low temperature alarm: __temperature__ °C is below __limit__ °C",
     "long_absence_cooling": "Long absence: no cooling, members off",
-    "window_open": "Window open: eco"
+    "window_open": "Window open: eco",
+    "outdoor_warm": "Outdoor __outdoor__ °C: no heating needed (heats below __limit__ °C)",
+    "always_comfort": "Always comfort",
+    "expensive_off": "Price expensive: off"
   },
   "member": {
     "heating_device_cooling": "heating device, off while cooling",

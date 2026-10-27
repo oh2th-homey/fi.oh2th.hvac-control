@@ -8,6 +8,7 @@
     "thermostat_mode",
     "enum_master_mode",
     "is_expensive",
+    "measure_temperature.outdoor",
     "measure_monetary",
     "text_prices_until",
     "text_reason"
@@ -47,6 +48,11 @@
       },
       "decimals": 4,
       "insights": true
+    },
+    "measure_temperature.outdoor": {
+      "title": {
+        "en": "Outdoor temperature"
+      }
     }
   },
   "$extends": [

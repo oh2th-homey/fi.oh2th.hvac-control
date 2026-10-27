@@ -37,6 +37,7 @@ module.exports = class zoneDevice extends mainDevice {
 
   async onSettings({ oldSettings, newSettings, changedKeys }) {
     this.log(`${this.getName()} - onSettings - changed: ${changedKeys}`);
+    if (newSettings.outdoor_off_above <= newSettings.outdoor_on_below) throw new Error(this.homey.__('error.outdoor_limit'));
     // Settings are saved after this returns.
     this.setTimer('settings', async () => {
       if (changedKeys.includes('has_cooling')) {
@@ -206,6 +207,18 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   /**
+   * @description Set the occupancy rule: follows home, always eco or always comfort (flow action).
+   */
+  async onAction_SET_OCCUPANCY_RULE(rule) {
+    this.log(`${this.getName()} - onAction_SET_OCCUPANCY_RULE - ${rule}`);
+    if (!['follows', 'always_eco', 'always_comfort'].includes(rule)) throw new Error(this.homey.__('error.invalid_value', { value: rule }));
+    if (rule === this.getSetting('occupancy_rule')) return false;
+    await this.setSettings({ occupancy_rule: rule });
+    await this.evaluate({ urgent: true });
+    return true;
+  }
+
+  /**
    * @description Set the setback (eco drop).
    */
   async onAction_SET_NUM_SETBACK(value) {
@@ -366,13 +379,19 @@ module.exports = class zoneDevice extends mainDevice {
         lowAlarm: this.getSetting('low_temp_alarm'),
         boostDelta: this.getSetting('boost_delta'),
         occupancyRule: this.getSetting('occupancy_rule'),
-        windowOpen: this.windowOpen(ms)
+        windowOpen: this.windowOpen(ms),
+        heatAllYear: this.getSetting('heat_all_year') === true,
+        priceUse: this.getSetting('price_use'),
+        priceAction: this.getSetting('price_action'),
+        outdoorLimit: { enabled: this.getSetting('outdoor_limit') === true, onBelow: this.getSetting('outdoor_on_below'), offAbove: this.getSetting('outdoor_off_above') },
+        outdoorAllowed: this.getStoreValue('outdoorAllowed')
       },
       temperature: this.getCapabilityValue('measure_temperature'),
       now: ms
     });
     const holdPrice = !urgent && !!this.decision && this.decision.priceDriven && decision.priceDriven;
     this.decision = decision;
+    if (decision.outdoorAllowed !== this.getStoreValue('outdoorAllowed')) await this.setStoreValue('outdoorAllowed', decision.outdoorAllowed).catch(this.error);
 
     this.issues = [];
     await this.applyThermostats(ms, holdPrice);
@@ -565,6 +584,7 @@ module.exports = class zoneDevice extends mainDevice {
           temperature: this.getCapabilityValue('measure_temperature'),
           target,
           heating: true,
+          mode: member.relayMode === 'enable' ? 'enable' : 'thermostat',
           onBelow: typeof member.relayOnBelow === 'number' ? member.relayOnBelow : pipeline.RELAY_ON_BELOW,
           offAt: typeof member.relayOffAt === 'number' ? member.relayOffAt : pipeline.RELAY_OFF_AT,
           minOnMs: minMs,

@@ -59,13 +59,16 @@ module.exports = class zoneDriver extends mainDriver {
   }
 
   /**
-   * @description At least one controlled device; relays need a temperature sensor.
+   * @description At least one controlled device. On save also: relays that switch on the room temperature need a
+   * temperature sensor (an enable switch does not); the relay mode is chosen on the configure page, so not before.
    */
-  checkSelection(members, candidates) {
+  checkSelection(members, candidates, onSave = false) {
     const byId = Object.fromEntries(candidates.map((device) => [device.id, device]));
     if (!members.some((member) => member.control)) throw new Error(this.homey.__('pair.members.error_no_control'));
+    if (!onSave) return;
     const hasTemperature = members.some((member) => member.sensor && byId[member.id] && byId[member.id].temperature);
-    if (members.some((member) => member.control === 'relay') && !hasTemperature) throw new Error(this.homey.__('pair.members.error_relay_sensor'));
+    const needsSensor = members.some((member) => member.control === 'relay' && member.relayMode !== 'enable');
+    if (needsSensor && !hasTemperature) throw new Error(this.homey.__('pair.members.error_relay_sensor'));
   }
 
   /**
@@ -94,14 +97,16 @@ module.exports = class zoneDriver extends mainDriver {
           modes: options.modes,
           ecoMode: member.ecoMode === 'fan' && options.modes.includes('fan') ? 'fan' : 'setback',
           invert: !!member.invert,
+          relayMode: member.relayMode === 'enable' ? 'enable' : 'thermostat',
+          seasonOffMode: member.seasonOffMode === 'fan' && options.modes.includes('fan') ? 'fan' : 'off',
           // A band never set gets the default; an unreadable one (null after JSON) stays invalid and is refused below.
           relayOnBelow: member.relayOnBelow === undefined ? pipeline.RELAY_ON_BELOW : Number(member.relayOnBelow ?? NaN),
           relayOffAt: member.relayOffAt === undefined ? pipeline.RELAY_OFF_AT : Number(member.relayOffAt ?? NaN)
         };
       });
 
-    this.checkSelection(members, Object.values(candidates));
-    const badBand = members.find((member) => member.control === 'relay' && !pipeline.validRelayBand(member.relayOnBelow, member.relayOffAt));
+    this.checkSelection(members, Object.values(candidates), true);
+    const badBand = members.find((member) => member.control === 'relay' && member.relayMode !== 'enable' && !pipeline.validRelayBand(member.relayOnBelow, member.relayOffAt));
     if (badBand) throw new Error(this.homey.__('pair.members.error_relay_band', { name: badBand.name }));
     return members;
   }

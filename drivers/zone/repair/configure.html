@@ -83,6 +83,12 @@
       document.getElementById(`rprev-${memberId}`).textContent = text;
     }
 
+    // The band only applies when the relay switches on the room temperature.
+    function showBand(memberId) {
+      const mode = document.getElementById(`rmode-${memberId}`).value;
+      document.getElementById(`rband-${memberId}`).style.display = mode === 'enable' ? 'none' : '';
+    }
+
     function defaultStep(device) {
       if (device.options.step >= 1) return 1;
       return device.options.step >= 0.5 ? 0.5 : 0.1;
@@ -99,16 +105,24 @@
         }
         if (member.control === 'ac' && device.options.modes.includes('fan')) {
           fieldset.appendChild(selectGroup(`eco-${member.id}`, t('eco'), [['setback', t('eco_setback')], ['fan', t('eco_fan')]], member.ecoMode || 'setback'));
+          fieldset.appendChild(selectGroup(`soff-${member.id}`, t('season_off'), [['off', t('season_off_off')], ['fan', t('eco_fan')]], member.seasonOffMode || 'off'));
         }
         if (member.control === 'relay') {
-          fieldset.appendChild(numberGroup(`ron-${member.id}`, t('relay_on'), typeof member.relayOnBelow === 'number' ? member.relayOnBelow : 0.3));
-          fieldset.appendChild(numberGroup(`roff-${member.id}`, t('relay_off'), typeof member.relayOffAt === 'number' ? member.relayOffAt : 0.3));
-          fieldset.appendChild(el('p', { class: 'hz-preview', id: `rprev-${member.id}` }));
-          fieldset.appendChild(el('p', { class: 'hz-hint', text: t('relay_band_hint') }));
+          fieldset.appendChild(selectGroup(`rmode-${member.id}`, t('relay_mode'), [['thermostat', t('relay_mode_thermostat')], ['enable', t('relay_mode_enable')]], member.relayMode || 'thermostat'));
+          const band = el('div', { id: `rband-${member.id}` }, [
+            numberGroup(`ron-${member.id}`, t('relay_on'), typeof member.relayOnBelow === 'number' ? member.relayOnBelow : 0.3),
+            numberGroup(`roff-${member.id}`, t('relay_off'), typeof member.relayOffAt === 'number' ? member.relayOffAt : 0.3),
+            el('p', { class: 'hz-preview', id: `rprev-${member.id}` }),
+            el('p', { class: 'hz-hint', text: t('relay_band_hint') })
+          ]);
+          fieldset.appendChild(band);
           fieldset.appendChild(checkboxGroup(`inv-${member.id}`, t('invert'), !!member.invert));
         }
         list.appendChild(fieldset);
-        if (member.control === 'relay') relayPreview(member.id);
+        if (member.control === 'relay') {
+          relayPreview(member.id);
+          showBand(member.id);
+        }
       }
       const sensors = selection.members.filter((m) => m.sensor && devices[m.id]).map((m) => devices[m.id].name);
       document.getElementById('cfg-sensors').textContent = sensors.length ? `${t('sensors_picked')}: ${sensors.join(', ')}` : '';
@@ -119,10 +133,14 @@
         const step = document.getElementById(`step-${member.id}`);
         const eco = document.getElementById(`eco-${member.id}`);
         const invert = document.getElementById(`inv-${member.id}`);
+        const relayMode = document.getElementById(`rmode-${member.id}`);
+        const seasonOff = document.getElementById(`soff-${member.id}`);
         const relayOn = document.getElementById(`ron-${member.id}`);
         const relayOff = document.getElementById(`roff-${member.id}`);
         return {
           ...member,
+          relayMode: relayMode ? relayMode.value : member.relayMode,
+          seasonOffMode: seasonOff ? seasonOff.value : member.seasonOffMode,
           relayOnBelow: relayOn ? decimal(relayOn.value) : member.relayOnBelow,
           relayOffAt: relayOff ? decimal(relayOff.value) : member.relayOffAt,
           step: step ? Number(step.value) : member.step || null,
@@ -137,7 +155,9 @@
       if (match) relayPreview(match[1]);
     });
 
-    list.addEventListener('change', () => {
+    list.addEventListener('change', (event) => {
+      const mode = /^rmode-(.+)$/.exec(event.target.id || '');
+      if (mode) showBand(mode[1]);
       Homey.emit('select', { name: selection.name, members: collect() }).catch(() => {});
     });
 

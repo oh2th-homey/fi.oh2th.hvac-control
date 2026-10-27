@@ -11,6 +11,8 @@ const SEASON_MODE = { heating: 'heat', cooling: 'cool', off: 'off' };
 const MODE_SEASON = { heat: 'heating', cool: 'cooling', off: 'off' };
 const MASTER_MODES = ['auto', 'long_absence', 'off'];
 
+// An outdoor temperature not updated for this long counts as unknown.
+const OUTDOOR_MAX_AGE_MS = 3 * 60 * 60 * 1000;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -90,6 +92,7 @@ module.exports = class hvacDevice extends mainDevice {
       masterMode: this.getCapabilityValue('enum_master_mode'),
       expensive: this.getCapabilityValue('is_expensive') === true,
       price: this.getCapabilityValue('measure_monetary'),
+      outdoor: this.outdoorTemperature(),
       priceReason: this.getCapabilityValue('text_reason'),
       at: Date.now()
     };
@@ -151,6 +154,27 @@ module.exports = class hvacDevice extends mainDevice {
    */
   async onAction_SET_ENUM_OCCUPANCY(value) {
     return this.onCapability_OCCUPANCY(value);
+  }
+
+  /**
+   * @description Outdoor temperature from the flow card, or null when unknown or older than OUTDOOR_MAX_AGE_MS.
+   */
+  outdoorTemperature() {
+    const value = this.getCapabilityValue('measure_temperature.outdoor');
+    const at = this.getStoreValue('outdoorAt');
+    if (typeof value !== 'number' || !at || Date.now() - at > OUTDOOR_MAX_AGE_MS) return null;
+    return value;
+  }
+
+  /**
+   * @description Set the outdoor temperature (flow action, from any sensor).
+   */
+  async onAction_SET_MEASURE_TEMPERATURE_OUTDOOR(value) {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < -60 || value > 60) throw new Error(this.homey.__('error.invalid_value', { value }));
+    const changed = await this.setValue('measure_temperature.outdoor', Math.round(value * 10) / 10);
+    await this.setStoreValue('outdoorAt', Date.now());
+    if (changed) await this.homey.app.onSharedStateChanged();
+    return true;
   }
 
   /**

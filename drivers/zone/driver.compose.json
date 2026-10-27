@@ -94,6 +94,17 @@
           }
         },
         {
+          "id": "heat_all_year",
+          "type": "checkbox",
+          "label": {
+            "en": "Heat all year"
+          },
+          "value": false,
+          "hint": {
+            "en": "Keep heating in the cooling and off seasons, e.g. a bathroom floor."
+          }
+        },
+        {
           "id": "occupancy_rule",
           "type": "dropdown",
           "label": {
@@ -101,7 +112,7 @@
           },
           "value": "follows",
           "hint": {
-            "en": "Follows home: comfort when someone is home or coming home. Always eco: eco until boosted, for example a guest room."
+            "en": "Follows home: comfort when someone is home or coming home. Always eco: e.g. a guest room. Always comfort: ignores who is home."
           },
           "values": [
             {
@@ -114,6 +125,12 @@
               "id": "always_eco",
               "label": {
                 "en": "Always eco"
+              }
+            },
+            {
+              "id": "always_comfort",
+              "label": {
+                "en": "Always comfort"
               }
             }
           ]
@@ -184,6 +201,126 @@
           },
           "hint": {
             "en": "How long a linked door or window may be open before the zone goes to eco. 0: at once."
+          }
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": {
+        "en": "Prices"
+      },
+      "children": [
+        {
+          "id": "price_use",
+          "type": "dropdown",
+          "label": {
+            "en": "Use prices"
+          },
+          "value": "both",
+          "hint": {
+            "en": "When an expensive quarter changes this zone."
+          },
+          "values": [
+            {
+              "id": "both",
+              "label": {
+                "en": "Heating and cooling"
+              }
+            },
+            {
+              "id": "heating",
+              "label": {
+                "en": "Heating only"
+              }
+            },
+            {
+              "id": "cooling",
+              "label": {
+                "en": "Cooling only"
+              }
+            },
+            {
+              "id": "never",
+              "label": {
+                "en": "Never"
+              }
+            }
+          ]
+        },
+        {
+          "id": "price_action",
+          "type": "dropdown",
+          "label": {
+            "en": "When expensive"
+          },
+          "value": "eco",
+          "hint": {
+            "en": "Eco: comfort minus setback. Off: the zone's devices are switched off."
+          },
+          "values": [
+            {
+              "id": "eco",
+              "label": {
+                "en": "Eco"
+              }
+            },
+            {
+              "id": "off",
+              "label": {
+                "en": "Off"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": {
+        "en": "Outdoor limit"
+      },
+      "children": [
+        {
+          "id": "outdoor_limit",
+          "type": "checkbox",
+          "label": {
+            "en": "Heat only when cold outside"
+          },
+          "value": false,
+          "hint": {
+            "en": "Uses the outdoor temperature set on the HVAC Controller."
+          }
+        },
+        {
+          "id": "outdoor_on_below",
+          "type": "number",
+          "label": {
+            "en": "Heat below"
+          },
+          "value": -10,
+          "min": -40,
+          "max": 30,
+          "step": 0.5,
+          "units": {
+            "en": "°C"
+          }
+        },
+        {
+          "id": "outdoor_off_above",
+          "type": "number",
+          "label": {
+            "en": "Stop above"
+          },
+          "value": -8,
+          "min": -40,
+          "max": 30,
+          "step": 0.5,
+          "units": {
+            "en": "°C"
+          },
+          "hint": {
+            "en": "In between, heating stays as it was."
           }
         }
       ]

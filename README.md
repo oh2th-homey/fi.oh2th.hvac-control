@@ -33,6 +33,8 @@ an hour and then fall back to comfort temperatures without price control.
 - Price model: Rate is highest (short local price peaks), Above average (N % above today's
   average) or Off
 - Currency of the imported prices (default €), shown with the price now, e.g. €/kWh
+- Outdoor temperature: fed by the **Set outdoor temperature** card from any sensor; used by zones
+  with an outdoor limit
 - Price resolution: 15 minutes or 60 minutes. Rate is highest needs 15-minute prices; with
   hourly prices the app uses Above average instead.
 
@@ -49,6 +51,13 @@ them later with **Repair** in the zone's device settings, which shows the same t
 - Zone mode: Auto, Manual (hands off: you control the members) and Off (members off: air
   conditioners and relays off, thermostats at their lowest setpoint)
 - Low temperature alarm: the zone problem alarm turns on below a set temperature (zone setting)
+- Occupancy rule: Follows home, Always eco (e.g. a guest room) or Always comfort (ignores who is
+  home); can be changed from a flow with **Set occupancy rule**
+- Heat all year: keeps heating in the cooling and off seasons (e.g. a bathroom floor)
+- Prices: use them in heating and cooling, only one season, or never; when expensive go to eco or
+  switch the zone off
+- Outdoor limit: heat only when it is colder outside than a set temperature (e.g. a hallway floor
+  that is only needed in hard frost)
 - Boost button: comfort plus the boost amount for the boost time, then back to normal. Press it
   again to end the boost early
 - Target now: the temperature the zone aims at right now (read-only)
@@ -70,6 +79,9 @@ Per device, when picking members:
 - **Step**: the setpoint step the device really accepts (1, 0.5 or 0.1 °C). Some thermostats
   claim 0.5 but only take whole degrees; the app also learns this from what the device reports.
 - **Eco** (air conditioners with a fan mode): setback (lower setpoint) or fan mode.
+- **When the season is off** (air conditioners with a fan mode): off or fan.
+- **Relay controls**: room temperature (with the relay band below) or heating on/off, for a
+  relay that only enables a heater with its own thermostat (no sensor needed).
 - **Relay band** (relays): **On below target by** and **Off at target plus**, in °C. Default 0.3
   and 0.3: on at 20.7 °C and off at 21.3 °C with a 21 °C target. A negative off value switches off
   below the target, for a heater that should only help the main heating: on 1.0, off −0.5 gives
@@ -105,7 +117,8 @@ is the target temperature, and Boost has enable, disable and toggle cards. The a
 
 HVAC Controller:
 
-- Actions: **Set occupancy**, **Set mode** (Auto, Long absence, Off), **Set long absence until**
+- Actions: **Set occupancy**, **Set mode** (Auto, Long absence, Off), **Set outdoor temperature**,
+  **Set long absence until**
   a date, **Import prices** (today's or tomorrow's), **Set price model** (with an optional
   percentage for Above average)
 - Conditions: occupancy is, price is expensive now
@@ -115,7 +128,7 @@ HVAC Controller:
 Heating Zone:
 
 - Actions: **Set zone mode** (Auto, Manual, Off), **Boost zone** for a number of minutes,
-  **Set comfort cool** (zones with cooling), **Set setback**
+  **Set comfort cool** (zones with cooling), **Set setback**, **Set occupancy rule**
 - Conditions: zone mode is, zone is in eco
 - Triggers: eco changed, target changed (with the reason), member write failed
 
@@ -196,6 +209,15 @@ Pick the window or door contact as **Window/door** in the zone. When it has been
 **Eco after door/window open** time (zone setting, default 2 minutes), the zone goes to eco; when all its
 windows and doors are closed it returns at once. An open window also ends the effect of boost
 while it is open. To be notified, use the zone's **Eco changed** trigger.
+
+### Heat a floor only in hard frost
+
+1. Feed the outdoor temperature: When your outdoor sensor's temperature changes → **Set outdoor
+   temperature**.
+2. In the zone pick the floor's relay as **Relay** with **Relay controls: Heating on/off**; the
+   floor's own thermostat regulates.
+3. In the zone settings turn on **Heat only when cold outside**, e.g. heat below −10 °C, stop
+   above −8 °C.
 
 ### Boost a room for a while
 

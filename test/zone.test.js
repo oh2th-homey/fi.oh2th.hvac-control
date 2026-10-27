@@ -69,6 +69,37 @@ test('window open: eco, overrides boost and comfort, not off or manual', () => {
   assert.strictEqual(decide({}, { windowOpen: true, mode: 'manual' }).aim, 'manual');
 });
 
+test('heat all year: heating in the cooling and off seasons', () => {
+  const summer = decide({ season: 'cooling' }, { heatAllYear: true });
+  assert.deepStrictEqual([summer.action, summer.target, summer.season], ['heat', 21, 'heating']);
+  assert.strictEqual(decide({ season: 'off' }, { heatAllYear: true }).action, 'heat');
+  assert.strictEqual(decide({ masterMode: 'off' }, { heatAllYear: true }).action, 'off');
+});
+
+test('outdoor limit: heat only when cold enough, dead band keeps the state', () => {
+  const limit = { enabled: true, onBelow: -10, offAbove: -8 };
+  assert.strictEqual(decide({ outdoor: -11 }, { outdoorLimit: limit }).action, 'heat');
+  const warm = decide({ outdoor: -7 }, { outdoorLimit: limit, outdoorAllowed: true });
+  assert.deepStrictEqual([warm.action, warm.offCause, warm.outdoorAllowed], ['off', 'outdoor_warm', false]);
+  assert.strictEqual(decide({ outdoor: -9 }, { outdoorLimit: limit, outdoorAllowed: true }).action, 'heat');
+  assert.strictEqual(decide({ outdoor: -9 }, { outdoorLimit: limit, outdoorAllowed: false }).action, 'off');
+  assert.strictEqual(decide({ outdoor: null }, { outdoorLimit: limit }).action, 'heat');
+  assert.strictEqual(decide({ outdoor: 5 }, { outdoorLimit: { ...limit, enabled: false } }).action, 'heat');
+});
+
+test('occupancy rule always comfort: comfort when away, price still applies', () => {
+  assert.deepStrictEqual([decide({ occupancy: 'away' }, { occupancyRule: 'always_comfort' }).aim], ['comfort']);
+  assert.strictEqual(decide({ occupancy: 'away', expensive: true }, { occupancyRule: 'always_comfort' }).aim, 'eco');
+});
+
+test('price use per zone and off when expensive', () => {
+  assert.strictEqual(decide({ expensive: true }, { priceUse: 'cooling' }).aim, 'comfort');
+  assert.strictEqual(decide({ expensive: true, season: 'cooling' }, { priceUse: 'cooling' }).aim, 'eco');
+  assert.strictEqual(decide({ expensive: true }, { priceUse: 'never' }).aim, 'comfort');
+  const offExpensive = decide({ expensive: true }, { priceAction: 'off' });
+  assert.deepStrictEqual([offExpensive.action, offExpensive.offCause, offExpensive.priceDriven], ['off', 'expensive_off', true]);
+});
+
 test('boost until a time, then normal; not in manual or off', () => {
   assert.strictEqual(decide({}, { mode: 'manual', boostUntil: NOW + 60000 }).aim, 'manual');
   assert.strictEqual(decide({}, { mode: 'off', boostUntil: NOW + 60000 }).aim, 'off');
@@ -165,6 +196,13 @@ test('relay band: asymmetric and extra heat below the target', () => {
   assert.strictEqual(pipeline.relay({ ...bed, on: true, temperature: 20.5 }).on, false);
 });
 
+test('relay enable switch: on while the zone heats, no temperature needed', () => {
+  assert.strictEqual(pipeline.relay({ mode: 'enable', on: false, temperature: null, target: 21, now: NOW }).on, true);
+  assert.strictEqual(pipeline.relay({ mode: 'enable', on: true, temperature: 25, target: 21, now: NOW }).on, true);
+  assert.strictEqual(pipeline.relay({ mode: 'enable', on: true, temperature: null, target: null, now: NOW }).on, false);
+  assert.strictEqual(pipeline.relay({ mode: 'enable', on: false, target: 21, minOffMs: 300000, lastSwitchAt: NOW - 60000, now: NOW }).on, false);
+});
+
 test('relay band validation: off must be above on', () => {
   assert.strictEqual(pipeline.validRelayBand(0.3, 0.3), true);
   assert.strictEqual(pipeline.validRelayBand(1, -0.5), true);
@@ -200,4 +238,8 @@ test('memberPlan: off, thermostat in cooling, A/C modes and fan eco', () => {
   assert.strictEqual(pipeline.memberPlan(decide({ occupancy: 'away' }), { ...ac, modes: ['heat', 'cool', 'off'] }).mode, 'heat');
   assert.strictEqual(pipeline.memberPlan(decide({ masterMode: 'long_absence' }), { ...ac, ecoMode: 'setback' }).mode, 'heat');
   assert.strictEqual(pipeline.memberPlan(decide({ masterMode: 'long_absence', season: 'cooling' }), ac).mode, 'off');
+  // Season off: fan when chosen, off for other off causes.
+  assert.strictEqual(pipeline.memberPlan(decide({ season: 'off' }), { ...ac, seasonOffMode: 'fan' }).mode, 'fan');
+  assert.strictEqual(pipeline.memberPlan(decide({ season: 'off' }), ac).mode, 'off');
+  assert.strictEqual(pipeline.memberPlan(decide({}, { mode: 'off' }), { ...ac, seasonOffMode: 'fan' }).mode, 'off');
 });
