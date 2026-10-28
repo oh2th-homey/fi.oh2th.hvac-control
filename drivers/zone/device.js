@@ -332,7 +332,14 @@ module.exports = class zoneDevice extends mainDevice {
    */
   onMemberReport(member, cap, value) {
     if (cap === 'measure_temperature' || cap === 'measure_humidity') {
-      this.updateClimate(Date.now());
+      // One device can report through several subscriptions (e.g. an A/C that is also the sensor): update once.
+      if (!this.climateQueued) {
+        this.climateQueued = true;
+        Promise.resolve().then(() => {
+          this.climateQueued = false;
+          this.updateClimate(Date.now());
+        });
+      }
       return;
     }
     if (cap === 'alarm_contact') {
@@ -578,10 +585,17 @@ module.exports = class zoneDevice extends mainDevice {
   async writeSetpoint(member, value, ms, retry = false) {
     if (!pipeline.valid(value, member)) throw new Error(`invalid setpoint ${value}`);
     this.log(`${this.getName()} - writeSetpoint - ${member.name}: ${value}${retry ? ' (retry)' : ''}`);
-    await this.members.write(member.id, 'target_temperature', value);
+    // Recorded before sending: the device's report can arrive before the write call returns.
     const st = this.state(member);
+    const previous = { written: st.written, writtenAt: st.writtenAt };
     st.written = value;
     st.writtenAt = ms;
+    try {
+      await this.members.write(member.id, 'target_temperature', value);
+    } catch (error) {
+      Object.assign(st, previous);
+      throw error;
+    }
     await this.saveMemberState();
     this.setTimer(`verify-${member.id}`, () => this.verifySetpoint(member, value, retry), VERIFY_MS);
   }
@@ -648,8 +662,11 @@ module.exports = class zoneDevice extends mainDevice {
         if (this.decision.action === 'none') continue;
         const reading = this.members.read(member.id, 'onoff');
         const raw = reading ? reading.value === true : false;
-        const on = member.invert ? !raw : raw;
         const st = this.state(member);
+        // A switch sent in the last minute counts until the device reports it, so two callers can't switch twice.
+        const pending = typeof st.relayOn === 'boolean' && ms - (st.switchedAt || 0) < 60000;
+        const reported = member.invert ? !raw : raw;
+        const on = pending ? st.relayOn : reported;
         // Relays heat: on/off around the target only while heating, off otherwise.
         const target = this.decision.action === 'heat' ? this.decision.target : null;
         const result = pipeline.relay({
@@ -668,8 +685,15 @@ module.exports = class zoneDevice extends mainDevice {
         if (result.reason.code === 'relay_no_temperature') issue(member, 'no_temperature', {}, true);
         if (result.on !== on) {
           this.log(`${this.getName()} - applyRelays - ${member.name}: ${on} => ${result.on}`);
-          await this.members.write(member.id, 'onoff', member.invert ? !result.on : result.on);
+          const previous = { relayOn: st.relayOn, switchedAt: st.switchedAt };
+          st.relayOn = result.on;
           st.switchedAt = ms;
+          try {
+            await this.members.write(member.id, 'onoff', member.invert ? !result.on : result.on);
+          } catch (error) {
+            Object.assign(st, previous);
+            throw error;
+          }
           saved = true;
         }
       } catch (error) {

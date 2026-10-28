@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "homey-api": "^3.21.0",
-    "oh2th-homey-helpers": "file:../fi.oh2th.homey-helpers"
+    "oh2th-homey-helpers": "github:oh2th-homey/fi.oh2th.homey-helpers#v0.3.0"
   },
   "engines": {
     "node": ">=22"

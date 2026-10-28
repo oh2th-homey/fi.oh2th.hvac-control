@@ -58,8 +58,9 @@ Generic helpers live in `oh2th-homey-helpers` (repo `../fi.oh2th.homey-helpers`,
 `serialize` (one run at a time).
 Use them instead of copying. When new code here could be generic (useful to other Homey apps),
 suggest moving it to the helpers package (with a test) rather than keeping it in this app's
-`lib/`; the author decides. Installed as a real copy (`.npmrc` `install-links=true`) from
-`file:../fi.oh2th.homey-helpers`; switch to a tagged `github:` dependency before publishing.
+`lib/`; the author decides. Installed from a tag (`github:oh2th-homey/fi.oh2th.homey-helpers#vX.Y.Z`). While changing the
+helpers, install the local copy (`npm install --install-links ../fi.oh2th.homey-helpers`, `.npmrc`
+has `install-links=true`), then tag the helpers and switch back to the tag before committing.
 Never use `Date.getHours()` etc. for local time on Homey (it is UTC); use `localTime(ctx)`.
 
 ### Repo layout
