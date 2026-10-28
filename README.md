@@ -44,10 +44,12 @@ Add one per area. Adding it has two pages: first name the zone and pick its devi
 room (a device can be both controlled and a sensor); then configure the picked devices. Change
 them later with **Repair** in the zone's device settings, which shows the same two pages.
 
-- Comfort heat setpoint (the main dial) and, when **Has cooling** is on in the zone settings,
-  a comfort cool setpoint (second dial). Without cooling the zone's members are off in the
-  cooling season
-- Setback 0–5 °C: the eco drop used when away or when the price is high
+- **Comfort heat** (the main dial) and **Eco heat**: the temperatures when someone is home, and
+  when nobody is home or the price is expensive. Eco is never warmer than comfort: moving one
+  past the other moves both
+- **Comfort cool** and **Eco cool**, when **Has cooling** is on in the zone settings. Eco cool is
+  never cooler than comfort cool. Without cooling the zone's members are off in the cooling
+  season
 - Zone mode: Auto, Manual (hands off: you control the members) and Off (members off: air
   conditioners and relays off, thermostats at their lowest setpoint)
 - Low temperature alarm: the zone problem alarm turns on below a set temperature (zone setting)
@@ -62,6 +64,13 @@ them later with **Repair** in the zone's device settings, which shows the same t
   again to end the boost early
 - Target now: the temperature the zone aims at right now (read-only)
 - Shows the zone temperature and humidity, and the reason for every change
+
+### Temperature units
+
+Homey shows dials and temperatures in °C or °F by your Homey's location, and the reason texts
+follow. After changing the Homey's location, restart the app. Zone settings, the configure page
+and the app's own flow card values (Set outdoor temperature, Set eco heat, Set comfort cool, Set eco
+cool, the Target now token) are always in °C.
 
 ## Zone members
 
@@ -78,7 +87,7 @@ Per device, when picking members:
 
 - **Step**: the setpoint step the device really accepts (1, 0.5 or 0.1 °C). Some thermostats
   claim 0.5 but only take whole degrees; the app also learns this from what the device reports.
-- **Eco** (air conditioners with a fan mode): setback (lower setpoint) or fan mode.
+- **Eco** (air conditioners with a fan mode): eco setpoint or fan mode.
 - **Between seasons** (air conditioners with a fan mode): off or fan while the season is Off.
 - **Relay controls**: room temperature (with the relay band below) or heating on/off, for a
   relay that only enables a heater with its own thermostat (no sensor needed).
@@ -101,13 +110,18 @@ the card and choose whether it is today's or tomorrow's prices. The token must b
 of quarter-hour (or hourly) rates for one day, starting at local midnight. From these the app
 works out the current price and the day's lowest, highest, average and median price itself.
 Tomorrow's prices may be partial or missing; import them again when they are published.
+Partial is normal: in a time zone ahead of the market's (e.g. Finland on a Central European
+market) the first hour of tomorrow is already known, so **Prices until** shows 01:00 tomorrow
+until the rest is published.
 
-Example with the Power by the Hour app:
+Example with the Power by the Hour app (an advanced flow):
 
-- When: Power by the Hour, new prices received (or every day at 00:05)
-- Then: Power by the Hour, get prices as JSON
-- Then: Import prices, today = the "this day" token
-- Then: Import prices, tomorrow = the "tomorrow" token
+- When: **New prices received** for this day → Then: **Import prices** today's, with its Prices token
+- When: **New prices received** for tomorrow → Then: **Import prices** tomorrow's, with its Prices token
+- When: every day at 00:05 → Then: **Provide import prices JSON** for this day → Then:
+  **Import prices** today's, with its Prices token (today's prices also after midnight)
+
+Leave **Include forecast prices** off: forecasts are estimates, not prices.
 
 ## Flow cards
 
@@ -128,7 +142,8 @@ HVAC Controller:
 Heating Zone:
 
 - Actions: **Set zone mode** (Auto, Manual, Off), **Boost zone** for a number of minutes,
-  **Set comfort cool** (zones with cooling), **Set setback**, **Set occupancy rule**
+  **Set eco heat**, **Set comfort cool** and **Set eco cool** (zones with cooling), **Set
+  occupancy rule**. Comfort heat has Homey's own set card
 - Conditions: zone mode is, zone is in eco
 - Triggers: eco changed, target changed (with the reason), member write failed
 
@@ -152,8 +167,8 @@ Feed occupancy from any presence source you already have:
 - Optional, when someone is on the way (for example a geofence a few kilometres out): **Set
   occupancy** to Coming Home
 
-Every zone re-evaluates at once. Present and Coming Home aim at comfort, Away at eco (comfort
-minus setback). A guest room that should stay at eco until you boost it: set the zone's
+Every zone re-evaluates at once. Present and Coming Home aim at comfort, Away at eco (the eco
+heat setpoint). A guest room that should stay at eco until you boost it: set the zone's
 **Occupancy** setting to Always eco.
 
 ### Save on expensive price peaks
@@ -196,12 +211,11 @@ Wiring where relay off means heating: tick **Inverted** for that relay on the co
 ### Use an air conditioner or air-to-air heat pump
 
 1. Pick it as **Air conditioner** (and as **Sensor** if it measures the room).
-2. On the configure page choose **Eco**: Setback (a lower setpoint) or Fan mode (only shown when
+2. On the configure page choose **Eco**: Eco setpoint or Fan mode (only shown when
    the device has a fan mode). With Fan mode the unit switches to fan when the zone goes to eco
    and back to heat (or cool) when eco ends.
-3. For cooling, turn on **Has cooling** in the zone settings: the zone gets a Comfort cool
-   dial, and in the cooling season the unit cools to comfort cool, or comfort cool plus setback
-   in eco.
+3. For cooling, turn on **Has cooling** in the zone settings: the zone gets Comfort cool
+   and Eco cool, and in the cooling season the unit cools to comfort cool, or to eco cool in eco.
 
 If your air conditioner app keeps fan mode in its own flow cards only, use the zone trigger
 **Eco changed** to run that card yourself.
@@ -243,7 +257,7 @@ after the minimum hold time; use Manual or Boost instead.
 
 ### Get alerted when a room gets cold
 
-Set the zone's **Low temperature alarm** (default 5 °C, 0 = off). Below it the zone's problem
+Set the zone's **Low temperature alarm** (default 10 °C, 0 = off). Below it the zone's problem
 alarm turns on in every mode; the app does not heat for it. Use the zone's problem alarm in a
 flow to send a notification.
 

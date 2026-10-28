@@ -1,0 +1,28 @@
+{
+  "title": {
+    "en": "Set eco cool"
+  },
+  "titleFormatted": {
+    "en": "Set eco cool to [[temperature]] °C"
+  },
+  "hint": {
+    "en": "Only for zones with Has cooling. Not below comfort cool: comfort follows if needed."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=zone"
+    },
+    {
+      "type": "number",
+      "name": "temperature",
+      "title": {
+        "en": "Temperature"
+      },
+      "min": 16,
+      "max": 32,
+      "step": 0.5
+    }
+  ]
+}

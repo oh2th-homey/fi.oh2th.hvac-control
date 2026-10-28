@@ -5,13 +5,14 @@ const { startMinuteInterval, stopMinuteInterval, dispatchInterval, forEachDevice
 const flowActions = require('./lib/flows/actions');
 const flowConditions = require('./lib/flows/conditions');
 const Members = require('./lib/members');
+const units = require('./lib/units');
 
 module.exports = class HvacControlApp extends Homey.App {
   /**
    * onInit is called when the app is initialized.
    */
   async onInit() {
-    this.log(`${this.homey.manifest.id}/${this.homey.manifest.version} - onInit`);
+    this.log(`${this.homey.manifest.id}/${this.homey.manifest.version} - onInit - units ${this.homey.i18n.getUnits()}, language ${this.homey.i18n.getLanguage()}`);
 
     // Other apps' devices (zone members), through the Homey Web API.
     this.members = new Members(this);
@@ -53,6 +54,20 @@ module.exports = class HvacControlApp extends Homey.App {
     } catch (error) {
       return null;
     }
+  }
+
+  /**
+   * @description Show temperatures in °F (reason texts). Homey's getUnits() can stay metric while Homey shows °F, but
+   * the Web API labels member temperatures °F then: either one means °F.
+   */
+  isImperial() {
+    let system;
+    try {
+      system = this.homey.i18n.getUnits();
+    } catch (error) {
+      system = 'metric';
+    }
+    return units.isImperial(system, this.members.fahrenheit());
   }
 
   /**

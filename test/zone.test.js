@@ -7,7 +7,7 @@ const zone = require('../lib/zone');
 const pipeline = require('../lib/pipeline');
 
 const NOW = Date.UTC(2026, 10, 10, 12);
-const ZONE = { mode: 'auto', boostUntil: null, heat: 21, cool: 24, setback: 2, boostDelta: 1, occupancyRule: 'follows', lowAlarm: 5 };
+const ZONE = { mode: 'auto', boostUntil: null, heat: 21, eco: 19, cool: 24, ecoCool: 26, boostDelta: 1, occupancyRule: 'follows', lowAlarm: 5 };
 const SHARED = { occupancy: 'present', season: 'heating', masterMode: 'auto', expensive: false };
 
 function decide(shared = {}, z = {}, extra = {}) {
@@ -48,8 +48,11 @@ test('long absence: eco like away, not price driven', () => {
   assert.deepStrictEqual([d.action, d.aim, d.target, d.priceDriven, d.reasons.at(-1).code], ['heat', 'eco', 19, false, 'long_absence']);
 });
 
-test('no floor: eco follows the setback', () => {
-  assert.strictEqual(decide({ occupancy: 'away' }, { heat: 9, setback: 4 }).target, 5);
+test('no floor: eco is the eco setpoint, never warmer than comfort', () => {
+  assert.strictEqual(decide({ occupancy: 'away' }, { heat: 9, eco: 5 }).target, 5);
+  assert.strictEqual(decide({ occupancy: 'away' }, { heat: 20, eco: 22 }).target, 20);
+  assert.strictEqual(decide({ occupancy: 'away', season: 'cooling' }, { cool: 24, ecoCool: 22 }).target, 24);
+  assert.strictEqual(decide({ occupancy: 'away' }, { eco: null }).target, 21);
 });
 
 test('manual: hands off; low temperature alarm in every mode, no heating', () => {
@@ -122,16 +125,16 @@ test('setpoint rounds toward the inside of the band', () => {
   // Comfort 21.5 is the top of band [19.5, 21.5]: round down.
   assert.strictEqual(pipeline.setpoint(decide({}, { heat: 21.5 }), step1).value, 21);
   // Eco 19.5 is the bottom: round up.
-  assert.strictEqual(pipeline.setpoint(decide({ occupancy: 'away' }, { heat: 21.5 }), step1).value, 20);
+  assert.strictEqual(pipeline.setpoint(decide({ occupancy: 'away' }, { heat: 21.5, eco: 19.5 }), step1).value, 20);
   // Cooling comfort 23.5 is the bottom of [23.5, 25.5]: round up.
-  assert.strictEqual(pipeline.setpoint(decide({ season: 'cooling' }, { cool: 23.5 }), step1).value, 24);
+  assert.strictEqual(pipeline.setpoint(decide({ season: 'cooling' }, { cool: 23.5, ecoCool: 25.5 }), step1).value, 24);
 });
 
 test('setpoint: no step in band protects comfort', () => {
   const step1 = { min: 5, max: 30, step: 1 };
-  const heat = pipeline.setpoint(decide({}, { heat: 21.5, setback: 0 }), step1);
+  const heat = pipeline.setpoint(decide({}, { heat: 21.5, eco: 21.5 }), step1);
   assert.deepStrictEqual([heat.value, heat.reasons[0].code], [22, 'no_step_in_band']);
-  assert.strictEqual(pipeline.setpoint(decide({ season: 'cooling' }, { cool: 23.5, setback: 0 }), step1).value, 23);
+  assert.strictEqual(pipeline.setpoint(decide({ season: 'cooling' }, { cool: 23.5, ecoCool: 23.5 }), step1).value, 23);
 });
 
 test('setpoint: clean numbers, clamp, off', () => {
@@ -140,7 +143,7 @@ test('setpoint: clean numbers, clamp, off', () => {
   const step1 = pipeline.setpoint(decide(), { min: 5, max: 30, step: 1 }).value;
   assert.ok(Number.isInteger(step1));
   assert.strictEqual(pipeline.setpoint(decide({}, {}), { min: 5, max: 30, step: 0.1 }).value, 21);
-  const low = pipeline.setpoint(decide({}, { heat: 8, setback: 0 }), { min: 10, max: 30, step: 1 });
+  const low = pipeline.setpoint(decide({}, { heat: 8, eco: 8 }), { min: 10, max: 30, step: 1 });
   assert.deepStrictEqual([low.value, low.reasons.at(-1).code], [10, 'clamped_min']);
   // Off: the thermostat's own lowest setpoint.
   const member = { control: 'thermostat', min: 5, max: 30, step: 0.5 };

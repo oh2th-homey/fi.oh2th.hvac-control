@@ -4,7 +4,7 @@
     "en": "Eco"
   },
   "hint": {
-    "en": "The zone aims at eco (comfort minus setback, or plus setback when cooling)."
+    "en": "The zone aims at its eco setpoint (eco heat, or eco cool when cooling)."
   },
   "getable": true,
   "setable": false,

@@ -4,12 +4,27 @@ const { localTime, updateCapabilities } = require('oh2th-homey-helpers');
 const mainDevice = require('../main-device');
 const zone = require('../../lib/zone');
 const pipeline = require('../../lib/pipeline');
+const units = require('../../lib/units');
 
 const VERIFY_MS = 60 * 1000;
 const RETRY_BACKOFF_MIN = [15, 30, 60];
+const HEAT = 'target_temperature';
+const ECO = 'target_temperature.eco';
 const COOL = 'target_temperature.cool';
+const ECO_COOL = 'target_temperature.eco_cool';
 const COOL_OPTIONS = { title: { en: 'Comfort cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
-const DEFAULTS = { 'target_temperature': 21, 'target_temperature.cool': 24, 'num_setback': 2, 'enum_zone_mode': 'auto', 'power_boost': false };
+const ECO_COOL_OPTIONS = { title: { en: 'Eco cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
+const DEFAULTS = { [HEAT]: 21, [ECO]: 19, [COOL]: 24, [ECO_COOL]: 26, enum_zone_mode: 'auto', power_boost: false };
+// Comfort and eco stay in order: eco heat never above comfort heat, eco cool never below comfort cool.
+// Changing one moves its partner along when they would cross.
+const SETPOINTS = {
+  [HEAT]: { min: 5, max: 30, partner: ECO, partnerBelow: true },
+  [ECO]: { min: 5, max: 30, partner: HEAT, partnerBelow: false },
+  [COOL]: { min: 16, max: 32, partner: ECO_COOL, partnerBelow: false },
+  [ECO_COOL]: { min: 16, max: 32, partner: COOL, partnerBelow: true }
+};
+// Values in reason texts that are temperature differences, not temperatures.
+const DIFFERENCE_ARGS = ['step'];
 
 function round1(value) {
   return typeof value === 'number' && Number.isFinite(value) ? Math.round(value * 10) / 10 : null;
@@ -17,6 +32,7 @@ function round1(value) {
 
 module.exports = class zoneDevice extends mainDevice {
   async onInitDevice() {
+    this.setpointListeners = {};
     this.members = this.homey.app.members;
     this.subscriptions = [];
     this.decision = null;
@@ -49,23 +65,36 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   /**
-   * @description Comfort cool is shown only when the zone has cooling.
+   * @description Comfort cool and eco cool are shown only when the zone has cooling. Zones from before the eco
+   * setpoints get them from their old setback (comfort heat minus it, comfort cool plus it).
    */
   async checkCapabilities() {
     const capabilities = [...(this.driver.manifest.capabilities || [])];
-    if (this.getSetting('has_cooling')) capabilities.push(COOL);
+    if (this.getSetting('has_cooling')) capabilities.push(COOL, ECO_COOL);
+    const setback = this.hasCapability('num_setback') ? this.getCapabilityValue('num_setback') : null;
+    if (typeof setback === 'number') await this.setStoreValue('setback', setback).catch(this.error);
     const result = await updateCapabilities(this, capabilities, this.getCapabilities());
     if (result.added.includes(COOL)) await this.setCapabilityOptions(COOL, COOL_OPTIONS).catch(this.error);
-    if (this.hasCapability(COOL) && !this.coolListener) {
-      this.registerCapabilityListener(COOL, this.onCapability_COMFORT_COOL.bind(this));
-      this.coolListener = true;
+    if (result.added.includes(ECO_COOL)) await this.setCapabilityOptions(ECO_COOL, ECO_COOL_OPTIONS).catch(this.error);
+    const oldSetback = this.getStoreValue('setback');
+    if (typeof oldSetback === 'number') {
+      const heat = this.getCapabilityValue(HEAT);
+      const cool = this.getCapabilityValue(COOL);
+      if (result.added.includes(ECO) && typeof heat === 'number') await this.setValue(ECO, Math.max(SETPOINTS[ECO].min, heat - oldSetback), true);
+      if (result.added.includes(ECO_COOL) && typeof cool === 'number') await this.setValue(ECO_COOL, Math.min(SETPOINTS[ECO_COOL].max, cool + oldSetback), true);
+    }
+    for (const key of [COOL, ECO_COOL]) {
+      if (this.hasCapability(key) && !this.setpointListeners[key]) {
+        this.registerCapabilityListener(key, (value) => this.changeSetpoint(key, value));
+        this.setpointListeners[key] = true;
+      }
     }
     return result;
   }
 
   async setCapabilityListeners() {
-    this.registerCapabilityListener('target_temperature', this.onCapability_TARGET_TEMPERATURE.bind(this));
-    this.registerCapabilityListener('num_setback', this.onCapability_SETBACK.bind(this));
+    this.registerCapabilityListener(HEAT, this.onCapability_TARGET_TEMPERATURE.bind(this));
+    this.registerCapabilityListener(ECO, this.onCapability_ECO_HEAT.bind(this));
     this.registerCapabilityListener('enum_zone_mode', this.onCapability_ZONE_MODE.bind(this));
     this.registerCapabilityListener('power_boost', this.onCapability_POWER_BOOST.bind(this));
   }
@@ -73,7 +102,7 @@ module.exports = class zoneDevice extends mainDevice {
   async setCapabilityValues(check = false) {
     try {
       for (const [key, value] of Object.entries(DEFAULTS)) {
-        if (this.getCapabilityValue(key) === null) await this.setValue(key, value, check);
+        if (this.hasCapability(key) && this.getCapabilityValue(key) === null) await this.setValue(key, value, check);
       }
       await this.subscribeMembers();
       this.updateClimate(Date.now());
@@ -103,8 +132,8 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   async onSharedStateChanged() {
-    // Init ends with its own evaluation.
-    if (this.initializing) return;
+    // Init ends with its own evaluation; not started yet is undefined.
+    if (this.initializing !== false) return;
     await this.evaluate();
   }
 
@@ -115,16 +144,14 @@ module.exports = class zoneDevice extends mainDevice {
    * @description Comfort heat setpoint (the main dial).
    */
   async onCapability_TARGET_TEMPERATURE(value) {
-    return this.changeSetpoint('target_temperature', value, 5, 30);
+    return this.changeSetpoint(HEAT, value);
   }
 
-  async onCapability_COMFORT_COOL(value) {
-    if (!this.hasCapability(COOL)) throw new Error(this.homey.__('error.no_cooling'));
-    return this.changeSetpoint(COOL, value, 16, 32);
-  }
-
-  async onCapability_SETBACK(value) {
-    return this.changeSetpoint('num_setback', Math.round(value), 0, 5);
+  /**
+   * @description Eco heat setpoint: away and when expensive.
+   */
+  async onCapability_ECO_HEAT(value) {
+    return this.changeSetpoint(ECO, value);
   }
 
   async onCapability_ZONE_MODE(value) {
@@ -142,12 +169,16 @@ module.exports = class zoneDevice extends mainDevice {
     }
   }
 
-  async changeSetpoint(key, value, min, max) {
+  async changeSetpoint(key, value) {
     this.log(`${this.getName()} - changeSetpoint - ${key}: ${value}`);
     try {
+      const { min, max, partner, partnerBelow } = SETPOINTS[key];
+      if (!this.hasCapability(key)) throw new Error(this.homey.__('error.no_cooling'));
       if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) throw new Error(this.homey.__('error.invalid_value', { value }));
       if (value === this.getCapabilityValue(key)) return Promise.resolve(false);
       await this.setValue(key, value);
+      const other = this.getCapabilityValue(partner);
+      if (this.hasCapability(partner) && typeof other === 'number' && (partnerBelow ? other > value : other < value)) await this.setValue(partner, value);
       await this.evaluate({ urgent: true });
       return Promise.resolve(true);
     } catch (error) {
@@ -203,7 +234,21 @@ module.exports = class zoneDevice extends mainDevice {
    * @description Set the comfort cool setpoint.
    */
   async onAction_SET_TARGET_TEMPERATURE_COOL(value) {
-    return this.onCapability_COMFORT_COOL(value);
+    return this.changeSetpoint(COOL, value);
+  }
+
+  /**
+   * @description Set the eco heat setpoint.
+   */
+  async onAction_SET_TARGET_TEMPERATURE_ECO(value) {
+    return this.onCapability_ECO_HEAT(value);
+  }
+
+  /**
+   * @description Set the eco cool setpoint (zones with cooling).
+   */
+  async onAction_SET_TARGET_TEMPERATURE_ECO_COOL(value) {
+    return this.changeSetpoint(ECO_COOL, value);
   }
 
   /**
@@ -216,13 +261,6 @@ module.exports = class zoneDevice extends mainDevice {
     await this.setSettings({ occupancy_rule: rule });
     await this.evaluate({ urgent: true });
     return true;
-  }
-
-  /**
-   * @description Set the setback (eco drop).
-   */
-  async onAction_SET_NUM_SETBACK(value) {
-    return this.onCapability_SETBACK(value);
   }
 
   /**
@@ -283,7 +321,8 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   /**
-   * @description Realtime report from a member: sensors update the zone climate, a fault value is restored at once.
+   * @description Realtime report from a member: sensors update the zone climate, a fault value is restored at once,
+   * but only once per verify window: a device that keeps reporting the fault is left to verifySetpoint and its backoff.
    */
   onMemberReport(member, cap, value) {
     if (cap === 'measure_temperature' || cap === 'measure_humidity') {
@@ -305,6 +344,7 @@ module.exports = class zoneDevice extends mainDevice {
     const kind = pipeline.classifyReport(value, st.written, member);
     if (kind === 'fault') {
       if (st.retryAt && Date.now() < st.retryAt) return;
+      if (st.writtenAt && Date.now() - st.writtenAt < VERIFY_MS) return;
       this.log(`${this.getName()} - onMemberReport - ${member.name} reported fault value ${value}, restoring ${st.written}`);
       this.writeSetpoint(member, st.written, Date.now()).catch(this.error);
     } else if (kind === 'hand') {
@@ -372,10 +412,11 @@ module.exports = class zoneDevice extends mainDevice {
       zone: {
         mode: this.getCapabilityValue('enum_zone_mode'),
         boostUntil: this.getCapabilityValue('power_boost') === true ? this.getStoreValue('boostUntil') : null,
-        heat: this.getCapabilityValue('target_temperature'),
+        heat: this.getCapabilityValue(HEAT),
+        eco: this.getCapabilityValue(ECO),
         cool: this.getCapabilityValue(COOL),
+        ecoCool: this.getCapabilityValue(ECO_COOL),
         hasCooling: this.hasCapability(COOL),
-        setback: this.getCapabilityValue('num_setback'),
         lowAlarm: this.getSetting('low_temp_alarm'),
         boostDelta: this.getSetting('boost_delta'),
         occupancyRule: this.getSetting('occupancy_rule'),
@@ -411,10 +452,12 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   reasonText() {
+    const imperial = this.homey.app.isImperial();
     const format = (args) => Object.fromEntries(
       Object.entries(args).map(([key, value]) => {
         if (key === 'until') return [key, localTime(this, new Date(value)).time];
-        return [key, typeof value === 'number' ? round1(value) : value];
+        if (typeof value !== 'number') return [key, value];
+        return [key, DIFFERENCE_ARGS.includes(key) ? units.formatDifference(value, imperial) : units.formatTemperature(value, imperial)];
       })
     );
     const parts = this.decision.reasons.map(({ code, args }) => this.homey.__(`zone.${code}`, format(args)));
@@ -459,6 +502,8 @@ module.exports = class zoneDevice extends mainDevice {
         const kind = typeof st.written === 'number' && reading ? pipeline.classifyReport(reading.value, st.written, member) : 'unknown';
         if (value === st.written && kind !== 'fault' && kind !== 'hand') continue;
 
+        // A fault right after our write is left to the pending verify, never rewritten in a loop.
+        if (kind === 'fault' && value === st.written && st.writtenAt && ms - st.writtenAt < VERIFY_MS) continue;
         const held = st.writtenAt && ms - st.writtenAt < holdMs;
         if (held && kind !== 'fault' && (holdPrice || kind === 'hand')) {
           this.issue(member, kind === 'hand' ? 'hand_wait' : 'hold', { value });
@@ -541,7 +586,8 @@ module.exports = class zoneDevice extends mainDevice {
     st.faults = (st.faults || 0) + 1;
     st.retryAt = Date.now() + RETRY_BACKOFF_MIN[Math.min(st.faults, RETRY_BACKOFF_MIN.length) - 1] * 60000;
     await this.saveMemberState();
-    const reason = this.homey.__('member.write_failed', { written: value, reported: reading.value });
+    const imperial = this.homey.app.isImperial();
+    const reason = this.homey.__('member.write_failed', { written: units.formatTemperature(value, imperial), reported: units.formatTemperature(reading.value, imperial) });
     this.log(`${this.getName()} - verifySetpoint - ${member.name}: ${reason}`);
     await this.triggerFlow('member_write_failed', { member: member.name, reason });
     await this.evaluate();

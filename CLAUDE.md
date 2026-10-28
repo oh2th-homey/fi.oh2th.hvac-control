@@ -155,8 +155,9 @@ immediately); use `.then(() => this.log(…))`.
   apps may appear in README examples only.
 - Inputs are **facts, not modes** (occupancy, long absence, prices, forecast). Never make the user
   translate facts into modes in flows; that is what made Homey Heating Scheduler too complex.
-- Few concepts: Heating Zone devices, one required HVAC Controller device (shared state), per zone comfort
-  heat/cool setpoints + setback (eco), members. Resist adding plans, schedules or mode lists.
+- Few concepts: Heating Zone devices, one required HVAC Controller device (shared state), per zone
+  comfort and eco setpoints for heat (and cool), members. Eco is a setpoint, not a difference.
+  Resist adding plans, schedules or mode lists.
 - Safety over savings: the band between comfort and eco is a hard limit, never write NaN/out-of-range/wrongly-typed values to devices (some Zigbee
   thermostats fall back to 4.0 °C).
 - Every decision carries a human-readable **reason** string (UI, camera images, notifications).

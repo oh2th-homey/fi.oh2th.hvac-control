@@ -5,7 +5,7 @@
   "class": "thermostat",
   "capabilities": [
     "target_temperature",
-    "num_setback",
+    "target_temperature.eco",
     "measure_temperature.set_target",
     "measure_temperature",
     "measure_humidity",
@@ -19,6 +19,15 @@
     "target_temperature": {
       "title": {
         "en": "Comfort heat"
+      },
+      "min": 5,
+      "max": 30,
+      "step": 0.5,
+      "decimals": 1
+    },
+    "target_temperature.eco": {
+      "title": {
+        "en": "Eco heat"
       },
       "min": 5,
       "max": 30,
@@ -90,7 +99,7 @@
           },
           "value": false,
           "hint": {
-            "en": "The zone has cooling, for example an air conditioner or air-to-air heat pump. Shows the Comfort cool setpoint. Without cooling, the zone's members are off in the cooling season."
+            "en": "The zone has cooling, for example an air conditioner or air-to-air heat pump. Shows the Comfort cool and Eco cool setpoints. Without cooling, the zone's members are off in the cooling season."
           }
         },
         {
@@ -141,7 +150,7 @@
           "label": {
             "en": "Low temperature alarm"
           },
-          "value": 5,
+          "value": 10,
           "min": 0,
           "max": 20,
           "step": 0.5,
@@ -256,7 +265,7 @@
           },
           "value": "eco",
           "hint": {
-            "en": "Eco: comfort minus setback. Off: the zone's devices are switched off."
+            "en": "Eco: the eco setpoint. Off: the zone's devices are switched off."
           },
           "values": [
             {
@@ -331,6 +340,17 @@
         "en": "Members"
       },
       "children": [
+        {
+          "id": "members_repair_note",
+          "type": "label",
+          "label": {
+            "en": "Devices"
+          },
+          "value": "Change with Repair",
+          "hint": {
+            "en": "Devices, roles and per-device options (thermostat step, relay controls and band, inverted relay, air conditioner eco and between-seasons mode) are changed with Repair, not here."
+          }
+        },
         {
           "id": "hold_minutes",
           "type": "number",
