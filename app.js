@@ -1,11 +1,10 @@
 'use strict';
 
 const Homey = require('homey');
-const { startMinuteInterval, stopMinuteInterval, dispatchInterval, forEachDevice } = require('oh2th-homey-helpers');
+const { startMinuteInterval, stopMinuteInterval, dispatchInterval, forEachDevice, isImperial } = require('oh2th-homey-helpers');
 const flowActions = require('./lib/flows/actions');
 const flowConditions = require('./lib/flows/conditions');
 const Members = require('./lib/members');
-const units = require('./lib/units');
 
 module.exports = class HvacControlApp extends Homey.App {
   /**
@@ -31,6 +30,7 @@ module.exports = class HvacControlApp extends Homey.App {
    * @description The one app interval: app-level work, then onInterval(now) on every device.
    */
   async onInterval(now) {
+    await this.members.refresh().catch((error) => this.error(`onInterval - members refresh - ${error}`));
     await dispatchInterval(this, now);
   }
 
@@ -67,7 +67,7 @@ module.exports = class HvacControlApp extends Homey.App {
     } catch (error) {
       system = 'metric';
     }
-    return units.isImperial(system, this.members.fahrenheit());
+    return isImperial(system, this.members.fahrenheit());
   }
 
   /**

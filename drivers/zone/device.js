@@ -1,10 +1,9 @@
 'use strict';
 
-const { localTime, updateCapabilities } = require('oh2th-homey-helpers');
+const { localTime, updateCapabilities, serialize, formatTemperature, formatDifference } = require('oh2th-homey-helpers');
 const mainDevice = require('../main-device');
 const zone = require('../../lib/zone');
 const pipeline = require('../../lib/pipeline');
-const units = require('../../lib/units');
 
 const VERIFY_MS = 60 * 1000;
 const RETRY_BACKOFF_MIN = [15, 30, 60];
@@ -33,6 +32,10 @@ function round1(value) {
 module.exports = class zoneDevice extends mainDevice {
   async onInitDevice() {
     this.setpointListeners = {};
+    this.runEvaluate = serialize((opts) => this.evaluateNow(opts), (a, b) => ({ urgent: !!(a.urgent || b.urgent) }));
+    // When each linked door or window opened (ms), and whether the last evaluation saw one open past the delay.
+    this.openSince = {};
+    this.windowWasOpen = false;
     this.members = this.homey.app.members;
     this.subscriptions = [];
     this.decision = null;
@@ -125,6 +128,9 @@ module.exports = class zoneDevice extends mainDevice {
     this.updateClimate(ms);
     if (localTime(this, now).minutes % 15 === 0) {
       await this.evaluate();
+    } else if (this.windowOpen(ms) !== this.windowWasOpen) {
+      // A door or window passed its delay, or closed: act now, not at the next quarter.
+      await this.evaluate({ urgent: true });
     } else {
       await this.applyRelays(ms, false);
       await this.retryDue(ms);
@@ -330,11 +336,10 @@ module.exports = class zoneDevice extends mainDevice {
       return;
     }
     if (cap === 'alarm_contact') {
-      // Closed: back at once. Open: eco after the zone's delay (re-checked on every minute tick too).
+      // Closed: back at once. Open: eco once open longer than the zone's delay, checked on every minute tick.
       this.log(`${this.getName()} - onMemberReport - ${member.name} ${value ? 'open' : 'closed'}`);
-      const delayMs = this.getSetting('window_delay_minutes') * 60000;
-      if (value) this.setTimer('window', () => this.evaluate({ urgent: true }), delayMs + 1000);
-      else this.clearTimer('window');
+      if (value) this.openSince[member.id] = this.openSince[member.id] || Date.now();
+      else delete this.openSince[member.id];
       this.evaluate({ urgent: true }).catch(this.error);
       return;
     }
@@ -357,12 +362,18 @@ module.exports = class zoneDevice extends mainDevice {
    */
   windowOpen(ms) {
     const delayMs = this.getSetting('window_delay_minutes') * 60000;
-    return this.getMembers().some((member) => {
-      if (!member.contact) return false;
+    let open = false;
+    for (const member of this.getMembers().filter((m) => m.contact)) {
       const reading = this.members.read(member.id, 'alarm_contact');
-      if (!reading || reading.value !== true) return false;
-      return !reading.lastUpdated || ms - reading.lastUpdated.getTime() >= delayMs;
-    });
+      if (!reading || reading.value !== true) {
+        delete this.openSince[member.id];
+        continue;
+      }
+      // Our own open time; one already open at start counts from its last update, or from now.
+      if (!this.openSince[member.id]) this.openSince[member.id] = reading.lastUpdated ? Math.min(reading.lastUpdated.getTime(), ms) : ms;
+      if (ms - this.openSince[member.id] >= delayMs) open = true;
+    }
+    return open;
   }
 
   /**
@@ -395,7 +406,15 @@ module.exports = class zoneDevice extends mainDevice {
    * @param {boolean} opts.urgent - User change: write now, no hold time
    * @param {boolean} opts.firstRun - Init: no triggers
    */
-  async evaluate({ urgent = false, firstRun = false } = {}) {
+  /**
+   * @description Evaluations run one at a time: a request while one runs is merged into a single rerun after it, so
+   * members are never written twice or triggers fired twice for the same change.
+   */
+  async evaluate(opts = {}) {
+    return this.runEvaluate(opts);
+  }
+
+  async evaluateNow({ urgent = false, firstRun = false } = {}) {
     const ms = Date.now();
     const controller = this.homey.app.findController();
     // A controller still initializing after an app restart is present: its capability values persist.
@@ -406,6 +425,9 @@ module.exports = class zoneDevice extends mainDevice {
     }
     const { shared, source } = zone.sharedState(live, this.lastShared, ms);
 
+    const windowOpen = this.windowOpen(ms);
+    if (windowOpen !== this.windowWasOpen) this.log(`${this.getName()} - evaluate - door or window open past the delay: ${windowOpen}`);
+    this.windowWasOpen = windowOpen;
     const decision = zone.decide({
       shared,
       source,
@@ -420,7 +442,7 @@ module.exports = class zoneDevice extends mainDevice {
         lowAlarm: this.getSetting('low_temp_alarm'),
         boostDelta: this.getSetting('boost_delta'),
         occupancyRule: this.getSetting('occupancy_rule'),
-        windowOpen: this.windowOpen(ms),
+        windowOpen,
         heatAllYear: this.getSetting('heat_all_year') === true,
         priceUse: this.getSetting('price_use'),
         priceAction: this.getSetting('price_action'),
@@ -457,7 +479,7 @@ module.exports = class zoneDevice extends mainDevice {
       Object.entries(args).map(([key, value]) => {
         if (key === 'until') return [key, localTime(this, new Date(value)).time];
         if (typeof value !== 'number') return [key, value];
-        return [key, DIFFERENCE_ARGS.includes(key) ? units.formatDifference(value, imperial) : units.formatTemperature(value, imperial)];
+        return [key, DIFFERENCE_ARGS.includes(key) ? formatDifference(value, imperial) : formatTemperature(value, imperial)];
       })
     );
     const parts = this.decision.reasons.map(({ code, args }) => this.homey.__(`zone.${code}`, format(args)));
@@ -501,6 +523,11 @@ module.exports = class zoneDevice extends mainDevice {
         const reading = this.members.read(member.id, 'target_temperature');
         const kind = typeof st.written === 'number' && reading ? pipeline.classifyReport(reading.value, st.written, member) : 'unknown';
         if (value === st.written && kind !== 'fault' && kind !== 'hand') continue;
+        // The device already shows the new value (after a restart, or changed by hand to it): adopt it, no write.
+        if (reading && pipeline.classifyReport(reading.value, value, member) === 'ok') {
+          st.written = value;
+          continue;
+        }
 
         // A fault right after our write is left to the pending verify, never rewritten in a loop.
         if (kind === 'fault' && value === st.written && st.writtenAt && ms - st.writtenAt < VERIFY_MS) continue;
@@ -587,7 +614,7 @@ module.exports = class zoneDevice extends mainDevice {
     st.retryAt = Date.now() + RETRY_BACKOFF_MIN[Math.min(st.faults, RETRY_BACKOFF_MIN.length) - 1] * 60000;
     await this.saveMemberState();
     const imperial = this.homey.app.isImperial();
-    const reason = this.homey.__('member.write_failed', { written: units.formatTemperature(value, imperial), reported: units.formatTemperature(reading.value, imperial) });
+    const reason = this.homey.__('member.write_failed', { written: formatTemperature(value, imperial), reported: formatTemperature(reading.value, imperial) });
     this.log(`${this.getName()} - verifySetpoint - ${member.name}: ${reason}`);
     await this.triggerFlow('member_write_failed', { member: member.name, reason });
     await this.evaluate();

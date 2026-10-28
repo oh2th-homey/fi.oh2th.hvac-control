@@ -1,6 +1,6 @@
 'use strict';
 
-const { localTime, strToMins } = require('oh2th-homey-helpers');
+const { localTime, strToMins, localDate, addDays, isDate, isTime } = require('oh2th-homey-helpers');
 const mainDevice = require('../main-device');
 const prices = require('../../lib/prices');
 
@@ -13,20 +13,11 @@ const MASTER_MODES = ['auto', 'long_absence', 'off'];
 
 // An outdoor temperature not updated for this long counts as unknown.
 const OUTDOOR_MAX_AGE_MS = 3 * 60 * 60 * 1000;
-const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-function isDate(value) {
-  if (!DATE_RE.test(value)) return false;
-  const [y, m, d] = value.split('-').map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d));
-  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
-}
 
 module.exports = class hvacDevice extends mainDevice {
   async onSettings({ oldSettings, newSettings, changedKeys }) {
     this.log(`${this.getName()} - onSettings - changed: ${changedKeys}`);
-    if (!TIME_RE.test(newSettings.tomorrow_check_time)) throw new Error(this.homey.__('error.invalid_time'));
+    if (!isTime(newSettings.tomorrow_check_time)) throw new Error(this.homey.__('error.invalid_time'));
     // Controllers paired before the setting existed have none yet: that means €.
     const currency = String(newSettings.currency ?? '€').trim();
     if (currency.length < 1 || currency.length > 5) throw new Error(this.homey.__('error.invalid_currency'));
@@ -219,8 +210,8 @@ module.exports = class hvacDevice extends mainDevice {
     const resolution = Number(settings.price_resolution);
     const timeZone = this.homey.clock.getTimezone();
     const now = Date.now();
-    const today = prices.localDate(timeZone, now);
-    const date = day === 'tomorrow' ? prices.addDays(today, 1) : today;
+    const today = localDate(timeZone, now);
+    const date = day === 'tomorrow' ? addDays(today, 1) : today;
 
     const parsed = prices.parsePrices(input);
     if (parsed.error) return this.rejectImport(day, parsed.error, {});
@@ -313,7 +304,7 @@ module.exports = class hvacDevice extends mainDevice {
     const settings = this.getSettings();
     const resolution = Number(settings.price_resolution);
     const timeZone = this.homey.clock.getTimezone();
-    const tomorrow = prices.addDays(prices.localDate(timeZone, now), 1);
+    const tomorrow = addDays(localDate(timeZone, now), 1);
     const entry = (this.getStoreValue('prices') || {})[tomorrow];
     const count = entry && entry.resolution === resolution ? entry.values.length : 0;
     const { slots } = prices.dayInfo(timeZone, tomorrow, resolution);

@@ -68,7 +68,7 @@ them later with **Repair** in the zone's device settings, which shows the same t
 ### Temperature units
 
 Homey shows dials and temperatures in °C or °F by your Homey's location, and the reason texts
-follow. After changing the Homey's location, restart the app. Zone settings, the configure page
+follow (within a minute of changing the Homey's location). Zone settings, the configure page
 and the app's own flow card values (Set outdoor temperature, Set eco heat, Set comfort cool, Set eco
 cool, the Target now token) are always in °C.
 

@@ -3,6 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
+const { midnight } = require('oh2th-homey-helpers');
 const prices = require('../lib/prices');
 
 const TZ = 'Europe/Helsinki';
@@ -49,9 +50,9 @@ test('day length follows DST', () => {
 });
 
 test('local midnight is a real instant', () => {
-  assert.strictEqual(new Date(prices.midnight(TZ, '2026-11-10')).toISOString(), '2026-11-09T22:00:00.000Z');
-  assert.strictEqual(new Date(prices.midnight(TZ, '2026-07-01')).toISOString(), '2026-06-30T21:00:00.000Z');
-  assert.strictEqual(new Date(prices.midnight('Europe/Amsterdam', '2026-10-25')).toISOString(), '2026-10-24T22:00:00.000Z');
+  assert.strictEqual(new Date(midnight(TZ, '2026-11-10')).toISOString(), '2026-11-09T22:00:00.000Z');
+  assert.strictEqual(new Date(midnight(TZ, '2026-07-01')).toISOString(), '2026-06-30T21:00:00.000Z');
+  assert.strictEqual(new Date(midnight('Europe/Amsterdam', '2026-10-25')).toISOString(), '2026-10-24T22:00:00.000Z');
 });
 
 test('rate is highest matches the original script', () => {

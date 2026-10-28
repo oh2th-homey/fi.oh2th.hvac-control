@@ -52,7 +52,10 @@ Plain JavaScript, `'use strict';`, CommonJS.
 
 Generic helpers live in `oh2th-homey-helpers` (repo `../fi.oh2th.homey-helpers`, see its README):
 `sleep`, `startMinuteInterval` / `stopMinuteInterval` / `dispatchInterval` / `forEachDevice`,
-`checkCapabilities` / `updateCapabilities`, `setValue`, `localTime` / `strToMins` / `minsToStr`.
+`checkCapabilities` / `updateCapabilities`, `setValue`, `localTime` / `strToMins` / `minsToStr`,
+`localDate` / `addDays` / `midnight` / `utcOffset` / `isDate` / `isTime`, temperature units
+(`formatTemperature`, `formatDifference`, `toCelsius`, `toFahrenheit`, `isFahrenheit`, `isImperial`),
+`serialize` (one run at a time).
 Use them instead of copying. When new code here could be generic (useful to other Homey apps),
 suggest moving it to the helpers package (with a test) rather than keeping it in this app's
 `lib/`; the author decides. Installed as a real copy (`.npmrc` `install-links=true`) from
