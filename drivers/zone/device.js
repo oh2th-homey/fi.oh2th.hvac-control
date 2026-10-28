@@ -365,11 +365,13 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   /**
-   * @description True when a linked door or window has been open longer than the zone's delay.
+   * @description True when a linked door or window has been open longer than the zone's delay, and after that
+   * until all of them are closed.
    */
   windowOpen(ms) {
     const delayMs = this.getSetting('window_delay_minutes') * 60000;
     let open = false;
+    let anyOpen = false;
     for (const member of this.getMembers().filter((m) => m.contact)) {
       const reading = this.members.read(member.id, 'alarm_contact');
       if (!reading || reading.value !== true) {
@@ -378,9 +380,11 @@ module.exports = class zoneDevice extends mainDevice {
       }
       // Our own open time; one already open at start counts from its last update, or from now.
       if (!this.openSince[member.id]) this.openSince[member.id] = reading.lastUpdated ? Math.min(reading.lastUpdated.getTime(), ms) : ms;
+      anyOpen = true;
       if (ms - this.openSince[member.id] >= delayMs) open = true;
     }
-    return open;
+    // The delay only applies to entering eco: once in eco, it lasts until all are closed (no flip on a handover).
+    return open || (this.windowWasOpen && anyOpen);
   }
 
   /**
@@ -399,8 +403,14 @@ module.exports = class zoneDevice extends mainDevice {
       }
       return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
     };
-    this.setValue('measure_temperature', round1(average('measure_temperature')), false, 0).catch(this.error);
-    this.setValue('measure_humidity', round1(average('measure_humidity')), false, 0).catch(this.error);
+    // A repeated sensor event must not set the same value twice while the first set is still in flight.
+    this.climate = this.climate || {};
+    for (const cap of ['measure_temperature', 'measure_humidity']) {
+      const value = round1(average(cap));
+      if (this.climate[cap] === value) continue;
+      this.climate[cap] = value;
+      this.setValue(cap, value, false, 0).catch(this.error);
+    }
   }
 
   /**
@@ -459,12 +469,11 @@ module.exports = class zoneDevice extends mainDevice {
       temperature: this.getCapabilityValue('measure_temperature'),
       now: ms
     });
-    const holdPrice = !urgent && !!this.decision && this.decision.priceDriven && decision.priceDriven;
     this.decision = decision;
     if (decision.outdoorAllowed !== this.getStoreValue('outdoorAllowed')) await this.setStoreValue('outdoorAllowed', decision.outdoorAllowed).catch(this.error);
 
     this.issues = [];
-    await this.applyThermostats(ms, holdPrice);
+    await this.applyThermostats(ms);
     await this.applyRelays(ms);
     await this.saveMemberState();
 
@@ -501,7 +510,7 @@ module.exports = class zoneDevice extends mainDevice {
   /**
    * @description Thermostat and A/C members: mode, setpoint through the pipeline, hold time, hand change and fault restore.
    */
-  async applyThermostats(ms, holdPrice) {
+  async applyThermostats(ms) {
     const holdMs = this.getSetting('hold_minutes') * 60000;
     for (const member of this.getMembers().filter((m) => m.control === 'thermostat' || m.control === 'ac')) {
       try {
@@ -538,9 +547,9 @@ module.exports = class zoneDevice extends mainDevice {
 
         // A fault right after our write is left to the pending verify, never rewritten in a loop.
         if (kind === 'fault' && value === st.written && st.writtenAt && ms - st.writtenAt < VERIFY_MS) continue;
-        const held = st.writtenAt && ms - st.writtenAt < holdMs;
-        if (held && kind !== 'fault' && (holdPrice || kind === 'hand')) {
-          this.issue(member, kind === 'hand' ? 'hand_wait' : 'hold', { value });
+        // Changes are written at once; only a setpoint changed by hand is left alone for the hold time.
+        if (kind === 'hand' && st.writtenAt && ms - st.writtenAt < holdMs) {
+          this.issue(member, 'hand_wait', { value });
           continue;
         }
         if (kind === 'hand') this.issue(member, 'hand_restored', { value: reading.value, written: value });
@@ -673,6 +682,7 @@ module.exports = class zoneDevice extends mainDevice {
           on,
           temperature: this.getCapabilityValue('measure_temperature'),
           target,
+          eco: this.decision.eco === true,
           heating: true,
           mode: member.relayMode === 'enable' ? 'enable' : 'thermostat',
           onBelow: typeof member.relayOnBelow === 'number' ? member.relayOnBelow : pipeline.RELAY_ON_BELOW,

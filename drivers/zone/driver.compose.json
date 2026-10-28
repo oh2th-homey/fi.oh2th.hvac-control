@@ -355,7 +355,7 @@
           "id": "hold_minutes",
           "type": "number",
           "label": {
-            "en": "Minimum hold time"
+            "en": "Hand change hold time"
           },
           "value": 30,
           "min": 0,
@@ -365,7 +365,7 @@
             "en": "min"
           },
           "hint": {
-            "en": "A price change waits at least this long after the last write to a member. Occupancy, mode and setpoint changes are written at once."
+            "en": "A setpoint changed by hand on a device is restored after this long. All other changes are written at once."
           }
         },
         {

@@ -90,7 +90,8 @@ Per device, when picking members:
 - **Eco** (air conditioners with a fan mode): eco setpoint or fan mode.
 - **Between seasons** (air conditioners with a fan mode): off or fan while the season is Off.
 - **Relay controls**: room temperature (with the relay band below) or heating on/off, for a
-  relay that only enables a heater with its own thermostat (no sensor needed).
+  relay that only enables a heater with its own thermostat (no sensor needed): on at comfort,
+  off in eco.
 - **Relay band** (relays): **On below target by** and **Off at target plus**, in °C. Default 0.3
   and 0.3: on at 20.7 °C and off at 21.3 °C with a 21 °C target. A negative off value switches off
   below the target, for a heater that should only help the main heating: on 1.0, off −0.5 gives
@@ -185,10 +186,8 @@ heat setpoint). A guest room that should stay at eco until you boost it: set the
    someone is home drops to eco for that quarter, then returns to comfort. Zones that are
    already at eco (Away) do not change.
 
-To avoid needless writes to battery thermostats, a price change waits for the zone's
-**Minimum hold time** (default 30 minutes) after the last write to a thermostat. Occupancy, mode
-and setpoint changes are written at once. On/off relays switch on their own schedule (see
-below).
+Price changes are written at once, so eco follows the peak exactly. On/off relays switch on
+their own schedule (see below).
 
 Use the trigger **Expensive now changed** or the condition **Price is expensive now** for
 anything else that should follow the price, such as a water heater.
@@ -232,7 +231,8 @@ while it is open. To be notified, use the zone's **Eco changed** trigger.
 1. Feed the outdoor temperature: When your outdoor sensor's temperature changes → **Set outdoor
    temperature**.
 2. In the zone pick the floor's relay as **Relay** with **Relay controls: Heating on/off**; the
-   floor's own thermostat regulates.
+   floor's own thermostat regulates. The relay is off while the zone is in eco (away, expensive,
+   door open).
 3. In the zone settings turn on **Heat only when cold outside**, e.g. heat below −10 °C, stop
    above −8 °C.
 
@@ -252,8 +252,8 @@ returns to Auto by itself. Setting the mode back to Auto ends it early.
 ### Take a zone over by hand
 
 Set the zone mode to **Manual**: the app stops writing to that zone's devices and you control
-them yourself. In Auto, a setpoint changed by hand on a thermostat is put back at the next write,
-after the minimum hold time; use Manual or Boost instead.
+them yourself. In Auto, a setpoint changed by hand on a thermostat is put back after the zone's **Hand change
+hold time** (default 30 minutes); use Manual or Boost instead.
 
 ### Get alerted when a room gets cold
 
@@ -269,7 +269,7 @@ Every zone shows a **Reason**, for example:
 - `Present: comfort; price expensive: eco` during an expensive quarter
 - `Boost to 22 °C until 07:25`
 - `Long absence: eco`, `Zone off: members off`
-- `<device>: waiting for the minimum hold time before writing 19 °C`
+- `<device>: changed by hand, restoring 19 °C after the hold time`
 
 The HVAC Controller shows the price reason, for example `Expensive: 0.1050 is a short price
 peak (threshold 0.0668)`. The trigger **Target changed** has the reason as a token for

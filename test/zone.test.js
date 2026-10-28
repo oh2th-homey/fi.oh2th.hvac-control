@@ -199,7 +199,9 @@ test('relay band: asymmetric and extra heat below the target', () => {
   assert.strictEqual(pipeline.relay({ ...bed, on: true, temperature: 20.5 }).on, false);
 });
 
-test('relay enable switch: on while the zone heats, no temperature needed', () => {
+test('relay enable switch: on while the zone heats at comfort, off in eco, no temperature needed', () => {
+  assert.strictEqual(pipeline.relay({ mode: 'enable', on: true, temperature: null, target: 19, eco: true, now: NOW }).on, false);
+  assert.strictEqual(pipeline.relay({ mode: 'enable', on: false, temperature: null, target: 21, eco: false, now: NOW }).on, true);
   assert.strictEqual(pipeline.relay({ mode: 'enable', on: false, temperature: null, target: 21, now: NOW }).on, true);
   assert.strictEqual(pipeline.relay({ mode: 'enable', on: true, temperature: 25, target: 21, now: NOW }).on, true);
   assert.strictEqual(pipeline.relay({ mode: 'enable', on: true, temperature: null, target: null, now: NOW }).on, false);

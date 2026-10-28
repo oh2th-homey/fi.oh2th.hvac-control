@@ -118,7 +118,6 @@
     "clamped_max": "__value__ is above the device maximum, writing __max__",
     "invalid": "invalid setpoint __value__, kept the last good value",
     "fault_wait": "write failed, retrying at __until__",
-    "hold": "waiting for the minimum hold time before writing __value__",
     "hand_wait": "changed by hand, restoring __value__ after the hold time",
     "hand_restored": "changed by hand to __value__, restored to __written__",
     "mode_missing": "the device has no __mode__ mode",
