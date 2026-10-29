@@ -12,7 +12,7 @@
     "eslint-config-athom": "^3.1.3"
   },
   "dependencies": {
-    "homey-api": "^3.21.0",
+    "homey-api": "^3.21.2",
     "oh2th-homey-helpers": "github:oh2th-homey/fi.oh2th.homey-helpers#v0.3.0"
   },
   "engines": {
