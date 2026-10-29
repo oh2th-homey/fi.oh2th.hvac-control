@@ -6,6 +6,14 @@ const pipeline = require('../../lib/pipeline');
 
 const FAULT_VALUE = 4;
 
+/**
+ * @description The temperature capability picked for a member, else the device's first (plain one first), or null.
+ */
+function chooseTemperature(device, picked) {
+  if (device.temperatures.some((cap) => cap.id === picked)) return picked;
+  return device.temperatures.length ? device.temperatures[0].id : null;
+}
+
 module.exports = class zoneDriver extends mainDriver {
   /**
    * @description Pairing: the HVAC Controller must exist; page "select" picks the devices per room, page "configure" sets them up.
@@ -89,7 +97,11 @@ module.exports = class zoneDriver extends mainDriver {
           sensor: !!member.sensor && (device.temperature || device.humidity),
           contact: !!member.contact && device.contact,
           temperature: device.temperature,
+          // Which temperature capability the zone reads, e.g. measure_temperature.local on some thermostats.
+          temperatureCap: chooseTemperature(device, member.temperatureCap),
           humidity: device.humidity,
+          // How a thermostat is switched off: thermostat_mode, onoff or system_mode; never by its setpoint.
+          offSwitch: device.offSwitch,
           step: [1, 0.5, 0.1].includes(member.step) ? member.step : options.step,
           min: options.min,
           max: options.max,

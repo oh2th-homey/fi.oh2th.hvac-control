@@ -53,7 +53,7 @@ The zone shows:
   cool is never cooler than comfort cool. A zone without cooling switches its devices off in the
   cooling season.
 - **Zone mode**: Auto, Manual or Off. In Manual the app leaves the devices alone. Off switches
-  air conditioners and relays off and sets thermostats to their lowest setpoint.
+  the zone's devices off.
 - **Boost**: comfort plus the boost amount for the boost time. Press it again to stop early.
 - **Target now**: the temperature the zone aims at right now.
 - **Follow home**: hours left of a temporary Follow home (see Guests in the guest room).
@@ -84,14 +84,17 @@ app's flow cards are always in °C.
 
 A zone can have:
 
-- **Thermostats**: any device with a target temperature. If it also has an on/off switch, for
-  example a heater with its own thermostat, the zone switches it on when heating and off when
-  the zone is off.
+- **Thermostats**: any device with a target temperature. To switch one off, the zone uses the
+  first it has of: `thermostat_mode` (off, and heat when heating), the on/off switch, or
+  `system_mode` (as on Zigbee2MQTT thermostats). It is found out automatically. The zone never
+  lowers the setpoint to mean off; a thermostat with none of these is left as it is and the zone
+  says so.
 - **Relays and smart plugs** that switch a heater.
 - **Air conditioners and air-to-air heat pumps**: heat, cool, off, and fan if the device has
   it.
 - **Sensors** for temperature and humidity. The zone uses the average of the sensors that are
-  available.
+  available. If a device has several temperatures, for example a thermostat with
+  `measure_temperature.local`, choose which one on the configure page.
 - **Windows and doors**: contact sensors.
 
 Options per device, on the configure page:
@@ -260,20 +263,20 @@ notification.
 Each zone shows a **Reason**, for example:
 
 - `Present: comfort` or `Away: eco`
-- `Present: comfort; price expensive: eco`
-- `Boost to 22 °C until 07:25`
+- `Price peak: eco`
+- `Boost 22 °C until 07:25`
 - `Window open: eco`
-- `<device>: changed by hand, restoring 19 °C after the hold time`
+- `Season off; <device>: fan`
+- `<device>: set by hand, restoring later`
 
-The HVAC Controller shows the price reason, for example `Expensive: 0.1050 is a short price
-peak (threshold 0.0668)`. The **Target changed** trigger has the reason as a token.
+The HVAC Controller shows the price reason, for example `Normal` or `Peak (over 0.0668)`. The **Target changed** trigger has the reason as a token.
 
 ## Troubleshooting
 
-- **"No temperature from an available sensor"**: the zone has relays but no working temperature
+- **"No temperature, off"**: the zone has relays but no working temperature
   sensor. Check that the sensor is available in Homey. With **Sensor timeout** set, a sensor that
   has not reported for that long also counts as missing.
-- **"HVAC Controller missing, using its last known state"**: the controller is unavailable or
+- **"Controller missing"**: the controller is unavailable or
   removed. After one hour the zones heat to comfort, ignore prices and show a problem.
 - **Prices rejected**: the controller's reason says why, for example hourly prices while the
   price resolution is 15 minutes. The previous prices are kept.

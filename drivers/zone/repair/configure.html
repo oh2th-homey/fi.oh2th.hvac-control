@@ -94,12 +94,23 @@
       return device.options.step >= 0.5 ? 0.5 : 0.1;
     }
 
+    // A sensor with several temperature capabilities (e.g. measure_temperature.local): choose which one the zone reads.
+    function temperatureChoices(device) {
+      const temps = device.temperatures || [];
+      return temps.map((cap) => [cap.id, temps.filter((other) => other.title === cap.title).length > 1 ? `${cap.title} (${cap.id})` : cap.title]);
+    }
+
     function render() {
       list.innerHTML = '';
       const devices = Object.fromEntries(selection.candidates.map((device) => [device.id, device]));
-      for (const member of selection.members.filter((m) => m.control && devices[m.id])) {
+      const choose = (member) => member.sensor && devices[member.id] && (devices[member.id].temperatures || []).length > 1;
+      for (const member of selection.members.filter((m) => (m.control || choose(m)) && devices[m.id])) {
         const device = devices[member.id];
-        const fieldset = el('fieldset', { class: 'homey-form-fieldset' }, [el('legend', { class: 'homey-form-legend', text: `${device.name} · ${t(member.control)}` })]);
+        const role = member.control ? t(member.control) : t('sensor_temperature');
+        const fieldset = el('fieldset', { class: 'homey-form-fieldset' }, [el('legend', { class: 'homey-form-legend', text: `${device.name} · ${role}` })]);
+        if (choose(member)) {
+          fieldset.appendChild(selectGroup(`temp-${member.id}`, t('temperature_cap'), temperatureChoices(device), member.temperatureCap || device.temperatures[0].id));
+        }
         if (member.control === 'thermostat' || member.control === 'ac') {
           fieldset.appendChild(selectGroup(`step-${member.id}`, t('step'), [[1, '1 °C'], [0.5, '0.5 °C'], [0.1, '0.1 °C']], member.step || defaultStep(device)));
         }
@@ -138,8 +149,10 @@
         const seasonOff = document.getElementById(`soff-${member.id}`);
         const relayOn = document.getElementById(`ron-${member.id}`);
         const relayOff = document.getElementById(`roff-${member.id}`);
+        const temperatureCap = document.getElementById(`temp-${member.id}`);
         return {
           ...member,
+          temperatureCap: temperatureCap ? temperatureCap.value : member.temperatureCap,
           relayMode: relayMode ? relayMode.value : member.relayMode,
           seasonOffMode: seasonOff ? seasonOff.value : member.seasonOffMode,
           relayOnBelow: relayOn ? decimal(relayOn.value) : member.relayOnBelow,

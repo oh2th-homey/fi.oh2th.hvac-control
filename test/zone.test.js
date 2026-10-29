@@ -5,6 +5,7 @@ const assert = require('node:assert');
 
 const zone = require('../lib/zone');
 const pipeline = require('../lib/pipeline');
+const { offSwitch } = require('../lib/members');
 
 const NOW = Date.UTC(2026, 10, 10, 12);
 const ZONE = { mode: 'auto', boostUntil: null, heat: 21, eco: 19, cool: 24, ecoCool: 26, boostDelta: 1, occupancyRule: 'follows', lowAlarm: 5 };
@@ -137,7 +138,7 @@ test('setpoint: no step in band protects comfort', () => {
   assert.strictEqual(pipeline.setpoint(decide({ season: 'cooling' }, { cool: 23.5, ecoCool: 23.5 }), step1).value, 23);
 });
 
-test('setpoint: clean numbers, clamp, off', () => {
+test('setpoint: clean numbers, clamp', () => {
   const half = pipeline.setpoint(decide({}, { heat: 20.7 }), { min: 5, max: 30, step: 0.5 });
   assert.strictEqual(half.value, 20.5);
   const step1 = pipeline.setpoint(decide(), { min: 5, max: 30, step: 1 }).value;
@@ -145,9 +146,6 @@ test('setpoint: clean numbers, clamp, off', () => {
   assert.strictEqual(pipeline.setpoint(decide({}, {}), { min: 5, max: 30, step: 0.1 }).value, 21);
   const low = pipeline.setpoint(decide({}, { heat: 8, eco: 8 }), { min: 10, max: 30, step: 1 });
   assert.deepStrictEqual([low.value, low.reasons.at(-1).code], [10, 'clamped_min']);
-  // Off: the thermostat's own lowest setpoint.
-  const member = { control: 'thermostat', min: 5, max: 30, step: 0.5 };
-  assert.strictEqual(pipeline.setpoint(pipeline.memberPlan(decide({}, { mode: 'off' }), member).decision, member).value, 5);
   assert.strictEqual(pipeline.setpoint({ ...decide(), target: NaN }, { min: 5, max: 30, step: 1 }).value, null);
 });
 
@@ -217,7 +215,7 @@ test('relay band validation: off must be above on', () => {
 });
 
 test('memberPlan: thermostat with onoff is switched on when heating, off otherwise', () => {
-  const heater = { control: 'thermostat', min: 5, hasOnoff: true };
+  const heater = { control: 'thermostat', min: 5, offSwitch: 'onoff' };
   const heat = pipeline.memberPlan(decide(), heater);
   assert.deepStrictEqual([heat.power, heat.decision.target], [true, 21]);
   const eco = pipeline.memberPlan(decide({ occupancy: 'away' }), heater);
@@ -233,9 +231,18 @@ test('memberPlan: off, thermostat in cooling, A/C modes and fan eco', () => {
   const thermostat = { control: 'thermostat', min: 5 };
   const ac = { control: 'ac', ecoMode: 'fan', modes: ['heat', 'cool', 'off', 'fan'], min: 10 };
   assert.strictEqual(pipeline.memberPlan(decide({}, { mode: 'manual' }), thermostat).skip, true);
-  assert.strictEqual(pipeline.memberPlan(decide({}, { mode: 'off' }), thermostat).decision.target, 5);
-  const summer = pipeline.memberPlan(decide({ season: 'cooling' }), thermostat);
-  assert.deepStrictEqual([summer.decision.target, summer.reasons[0].code], [5, 'heating_device_cooling']);
+  // Never off by lowering the setpoint: onoff, else the mode capability, else left as is with a note.
+  const noSwitch = pipeline.memberPlan(decide({}, { mode: 'off' }), thermostat);
+  assert.deepStrictEqual([noSwitch.decision, noSwitch.mode, noSwitch.reasons.at(-1).code], [null, null, 'no_off_switch']);
+  const z2m = { ...thermostat, offSwitch: 'system_mode' };
+  const z2mOff = pipeline.memberPlan(decide({}, { mode: 'off' }), z2m);
+  assert.deepStrictEqual([z2mOff.mode, z2mOff.modeCap, z2mOff.decision], ['off', 'system_mode', null]);
+  const z2mHeat = pipeline.memberPlan(decide(), z2m);
+  assert.deepStrictEqual([z2mHeat.mode, z2mHeat.modeCap, z2mHeat.decision.target], ['heat', 'system_mode', 21]);
+  const byMode = pipeline.memberPlan(decide({}, { mode: 'off' }), { ...thermostat, offSwitch: 'thermostat_mode' });
+  assert.deepStrictEqual([byMode.mode, byMode.modeCap, byMode.power], ['off', 'thermostat_mode', null]);
+  const summer = pipeline.memberPlan(decide({ season: 'cooling' }), z2m);
+  assert.deepStrictEqual([summer.mode, summer.decision, summer.reasons[0].code], ['off', null, 'heating_device_cooling']);
   assert.deepStrictEqual([pipeline.memberPlan(decide({}, { mode: 'off' }), ac).mode, pipeline.memberPlan(decide({}, { mode: 'off' }), ac).decision], ['off', null]);
   assert.strictEqual(pipeline.memberPlan(decide(), ac).mode, 'heat');
   assert.strictEqual(pipeline.memberPlan(decide({ season: 'cooling' }), ac).mode, 'cool');
@@ -266,4 +273,22 @@ test('long absence: an A/C with eco fan heats at eco and runs fan only while the
   assert.strictEqual(pipeline.memberPlan(absence, ac, { temperature: 19.5, lastMode: 'fan' }).mode, 'fan');
   assert.strictEqual(pipeline.memberPlan(absence, ac, { temperature: 19, lastMode: 'fan' }).mode, 'heat');
   assert.strictEqual(pipeline.memberPlan(decide({ occupancy: 'away' }), ac, { temperature: 15 }).mode, 'fan');
+});
+
+test('a price peak replaces the presence reason; fan gets a device note', () => {
+  assert.deepStrictEqual(decide({ expensive: true }).reasons.map((r) => r.code), ['expensive']);
+  assert.deepStrictEqual(decide({ expensive: true }, { priceAction: 'off' }).reasons.map((r) => r.code), ['expensive_off']);
+  const ac = { control: 'ac', ecoMode: 'fan', seasonOffMode: 'fan', modes: ['heat', 'cool', 'fan', 'off'], min: 10, max: 30, step: 1 };
+  assert.deepStrictEqual(pipeline.memberPlan(decide({ occupancy: 'away' }), ac).reasons.map((r) => r.code), ['fan']);
+  assert.deepStrictEqual(pipeline.memberPlan(decide({ season: 'off' }), ac).reasons.map((r) => r.code), ['fan']);
+});
+
+test('off switch detection: thermostat_mode, then onoff, then system_mode', () => {
+  const mode = (ids) => ({ setable: true, values: ids.map((id) => ({ id })) });
+  assert.strictEqual(offSwitch({ thermostat_mode: mode(['heat', 'off']), onoff: { setable: true } }), 'thermostat_mode');
+  assert.strictEqual(offSwitch({ thermostat_mode: mode(['heat', 'cool']), onoff: { setable: true } }), 'onoff');
+  assert.strictEqual(offSwitch({ onoff: { setable: true }, system_mode: mode(['heat', 'off']) }), 'onoff');
+  assert.strictEqual(offSwitch({ system_mode: { setable: true } }), 'system_mode');
+  assert.strictEqual(offSwitch({ system_mode: mode(['heat', 'auto']) }), null);
+  assert.strictEqual(offSwitch({ target_temperature: {} }), null);
 });

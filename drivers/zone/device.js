@@ -341,13 +341,14 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   async subscribeMembers() {
+    await this.detectOffModes();
     for (const member of this.getMembers()) {
       const caps = [];
       if (member.control === 'thermostat' || member.control === 'ac') caps.push('target_temperature');
-      if (member.control === 'thermostat' && member.hasOnoff !== false) caps.push('onoff');
+      if (member.control === 'thermostat' && member.offSwitch) caps.push(member.offSwitch);
       if (member.control === 'ac') caps.push('thermostat_mode');
       if (member.control === 'relay') caps.push('onoff');
-      if (member.sensor && member.temperature) caps.push('measure_temperature');
+      if (member.sensor && member.temperature) caps.push(member.temperatureCap || 'measure_temperature');
       if (member.sensor && member.humidity) caps.push('measure_humidity');
       if (member.contact) caps.push('alarm_contact');
       for (const cap of caps) {
@@ -361,6 +362,20 @@ module.exports = class zoneDevice extends mainDevice {
         }
       }
     }
+  }
+
+  /**
+   * @description Thermostats added before the off switch was stored: find out once how to switch them off.
+   */
+  async detectOffModes() {
+    const members = this.getMembers();
+    const unknown = members.filter((member) => member.control === 'thermostat' && member.offSwitch === undefined);
+    if (!unknown.length) return;
+    for (const member of unknown) {
+      member.offSwitch = await this.members.offSwitch(member.id).catch(() => null);
+      this.log(`${this.getName()} - detectOffModes - ${member.name}: ${member.offSwitch || 'none'}`);
+    }
+    await this.setStoreValue('members', members).catch(this.error);
   }
 
   unsubscribeMembers() {
@@ -382,7 +397,7 @@ module.exports = class zoneDevice extends mainDevice {
    * but only once per verify window: a device that keeps reporting the fault is left to verifySetpoint and its backoff.
    */
   onMemberReport(member, cap, value) {
-    if (cap === 'measure_temperature' || cap === 'measure_humidity') {
+    if (cap.startsWith('measure_temperature') || cap === 'measure_humidity') {
       // One device can report through several subscriptions (e.g. an A/C that is also the sensor): update once.
       if (!this.climateQueued) {
         this.climateQueued = true;
@@ -447,7 +462,7 @@ module.exports = class zoneDevice extends mainDevice {
     const average = (cap) => {
       const values = [];
       for (const member of this.getMembers().filter((m) => m.sensor)) {
-        const reading = this.members.read(member.id, cap);
+        const reading = this.members.read(member.id, cap === 'measure_temperature' ? member.temperatureCap || cap : cap);
         if (!reading || typeof reading.value !== 'number' || !reading.available) continue;
         if (staleMs > 0 && reading.lastUpdated && ms - reading.lastUpdated.getTime() > staleMs) continue;
         values.push(reading.value);
@@ -570,14 +585,12 @@ module.exports = class zoneDevice extends mainDevice {
     const holdMs = this.getSetting('hold_minutes') * 60000;
     for (const member of this.getMembers().filter((m) => m.control === 'thermostat' || m.control === 'ac')) {
       try {
-        // A thermostat with onoff (e.g. a heater with its own thermostat) is switched on and off too.
-        const hasOnoff = member.control === 'thermostat' && this.members.read(member.id, 'onoff') !== null;
         const st = this.state(member);
-        const plan = pipeline.memberPlan(this.decision, { ...member, hasOnoff }, { temperature: this.getCapabilityValue('measure_temperature'), lastMode: st.mode });
+        const plan = pipeline.memberPlan(this.decision, member, { temperature: this.getCapabilityValue('measure_temperature'), lastMode: st.mode });
         if (plan.skip) continue;
         for (const reason of plan.reasons) this.issue(member, reason.code, reason.args);
 
-        if (plan.mode) await this.applyMode(member, plan.mode);
+        if (plan.mode) await this.applyMode(member, plan.mode, plan.modeCap);
         if (plan.power !== null && plan.power !== undefined) await this.applyPower(member, plan.power);
         if (!plan.decision) continue;
 
@@ -617,17 +630,21 @@ module.exports = class zoneDevice extends mainDevice {
     }
   }
 
-  async applyMode(member, mode) {
+  /**
+   * @description Write the mode of an A/C (thermostat_mode) or the off/heat mode of a thermostat without onoff
+   * (thermostat_mode or system_mode).
+   */
+  async applyMode(member, mode, cap = 'thermostat_mode') {
     const st = this.state(member);
-    const reading = this.members.read(member.id, 'thermostat_mode');
+    const reading = this.members.read(member.id, cap);
     // Skip only when both our last write and the report agree: a stale realtime value alone must not block a change.
     if (st.mode === mode && reading && reading.value === mode) return;
-    if (!(member.modes || []).includes(mode)) {
+    if (member.control === 'ac' && !(member.modes || []).includes(mode)) {
       this.issue(member, 'mode_missing', { mode }, true);
       return;
     }
-    this.log(`${this.getName()} - applyMode - ${member.name}: ${reading ? reading.value : '?'} (last written ${st.mode || '-'}) => ${mode}`);
-    await this.members.write(member.id, 'thermostat_mode', mode);
+    this.log(`${this.getName()} - applyMode - ${member.name} ${cap}: ${reading ? reading.value : '?'} (last written ${st.mode || '-'}) => ${mode}`);
+    await this.members.write(member.id, cap, mode);
     st.mode = mode;
   }
 

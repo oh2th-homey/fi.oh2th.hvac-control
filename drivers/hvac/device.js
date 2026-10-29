@@ -50,7 +50,9 @@ module.exports = class hvacDevice extends mainDevice {
    */
   async applyCurrency(currency = this.getSetting('currency')) {
     const symbol = String(currency || '€').trim() || '€';
-    await this.setCapabilityOptions('measure_monetary', { units: { en: `${symbol}/kWh` } }).catch(this.error);
+    // setCapabilityOptions replaces the manifest's options for this capability: pass title and decimals too.
+    const { title, decimals } = this.driver.manifest.capabilitiesOptions.measure_monetary;
+    await this.setCapabilityOptions('measure_monetary', { title, decimals, units: { en: `${symbol}/kWh` } }).catch(this.error);
   }
 
   async setCapabilityValues(check = false) {
