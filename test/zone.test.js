@@ -5,7 +5,7 @@ const assert = require('node:assert');
 
 const zone = require('../lib/zone');
 const pipeline = require('../lib/pipeline');
-const { offSwitch, isAirConditioner } = require('../lib/members');
+const { offSwitch, isAirConditioner, temperatureCapabilities } = require('../lib/members');
 
 const NOW = Date.UTC(2026, 10, 10, 12);
 const ZONE = { mode: 'auto', boostUntil: null, heat: 21, eco: 19, cool: 24, ecoCool: 26, boostDelta: 1, occupancyRule: 'follows', lowAlarm: 5 };
@@ -305,4 +305,13 @@ test('relay band needs at least 0.2 °C between on and off', () => {
   assert.strictEqual(pipeline.validRelayBand(0.1, 0.05), false);
   assert.strictEqual(pipeline.validRelayBand(0.5, -0.4), false);
   assert.strictEqual(pipeline.validRelayBand(NaN, 0.3), false);
+});
+
+test('temperature choices: one with a value first, then the plain one', () => {
+  const t = (value) => ({ value, units: '°C', decimals: 1 });
+  // Zigbee2MQTT thermostat: plain measure_temperature empty, the value in .local.
+  const z2m = temperatureCapabilities({ 'measure_temperature': t(null), 'measure_temperature.local': t(21.04) });
+  assert.deepStrictEqual(z2m.map((cap) => [cap.id, cap.reading]), [['measure_temperature.local', '21 °C'], ['measure_temperature', null]]);
+  const both = temperatureCapabilities({ 'measure_temperature.floor': t(24.5), 'measure_temperature': t(20.5) });
+  assert.deepStrictEqual(both.map((cap) => cap.id), ['measure_temperature', 'measure_temperature.floor']);
 });

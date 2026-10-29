@@ -7,7 +7,7 @@ const pipeline = require('../../lib/pipeline');
 const FAULT_VALUE = 4;
 
 /**
- * @description The temperature capability picked for a member, else the device's first (plain one first), or null.
+ * @description The temperature capability picked for a member, else the device's first (one that reports a value), or null.
  */
 function chooseTemperature(device, picked) {
   if (device.temperatures.some((cap) => cap.id === picked)) return picked;
