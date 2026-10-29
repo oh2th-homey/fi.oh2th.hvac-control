@@ -5,6 +5,7 @@ CLAUDE.local.md
 env.json
 .env*
 fixtures-raw/
+local_assets/
 
 # Homey / Node
 *.log

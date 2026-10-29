@@ -79,7 +79,7 @@ lib/flows/conditions.js     exports.init(ctx): register condition run listeners
 lib/<name>.js               one class per external API/protocol, plus pure logic modules
 .homeycompose/app.json, capabilities/*.json, flow/{actions,conditions,triggers}/*.json,
 .homeycompose/drivers/templates/*.json   (device.json, settings.json, pair-*.json)
-locales/en.json, assets/, local_assets/ (sources, listed in .homeyignore), .github/FUNDING.yml
+locales/en.json, assets/, local_assets/ (sources, in .gitignore and .homeyignore), .github/FUNDING.yml
 ```
 
 Lint/format: `.eslintrc.json` extends `athom` (same relaxed rule set as go-e), `.prettierrc`
