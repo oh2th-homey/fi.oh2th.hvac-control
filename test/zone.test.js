@@ -256,3 +256,14 @@ test('follow home overrides the occupancy rule until it runs out', () => {
   assert.strictEqual(decide({ occupancy: 'away' }, guest).aim, 'eco');
   assert.strictEqual(decide({}, { ...guest, followUntil: NOW - 1 }).aim, 'eco');
 });
+
+test('long absence: an A/C with eco fan heats at eco and runs fan only while the room is warm', () => {
+  const ac = { control: 'ac', ecoMode: 'fan', modes: ['heat', 'cool', 'fan', 'off'], min: 10, max: 30, step: 1 };
+  const absence = decide({ masterMode: 'long_absence' });
+  assert.strictEqual(pipeline.memberPlan(absence, ac, { temperature: 18.5 }).mode, 'heat');
+  assert.strictEqual(pipeline.memberPlan(absence, ac, { temperature: null }).mode, 'heat');
+  assert.strictEqual(pipeline.memberPlan(absence, ac, { temperature: 20 }).mode, 'fan');
+  assert.strictEqual(pipeline.memberPlan(absence, ac, { temperature: 19.5, lastMode: 'fan' }).mode, 'fan');
+  assert.strictEqual(pipeline.memberPlan(absence, ac, { temperature: 19, lastMode: 'fan' }).mode, 'heat');
+  assert.strictEqual(pipeline.memberPlan(decide({ occupancy: 'away' }), ac, { temperature: 15 }).mode, 'fan');
+});

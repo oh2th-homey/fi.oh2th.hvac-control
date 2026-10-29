@@ -572,10 +572,10 @@ module.exports = class zoneDevice extends mainDevice {
       try {
         // A thermostat with onoff (e.g. a heater with its own thermostat) is switched on and off too.
         const hasOnoff = member.control === 'thermostat' && this.members.read(member.id, 'onoff') !== null;
-        const plan = pipeline.memberPlan(this.decision, { ...member, hasOnoff });
+        const st = this.state(member);
+        const plan = pipeline.memberPlan(this.decision, { ...member, hasOnoff }, { temperature: this.getCapabilityValue('measure_temperature'), lastMode: st.mode });
         if (plan.skip) continue;
         for (const reason of plan.reasons) this.issue(member, reason.code, reason.args);
-        const st = this.state(member);
 
         if (plan.mode) await this.applyMode(member, plan.mode);
         if (plan.power !== null && plan.power !== undefined) await this.applyPower(member, plan.power);
