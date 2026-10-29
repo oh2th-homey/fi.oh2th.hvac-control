@@ -4,7 +4,7 @@
     "en": "Mode"
   },
   "hint": {
-    "en": "Auto: zones follow occupancy and prices. Long absence: everyone away for days, zones at eco and no cooling. Off: zones stop heating and cooling."
+    "en": "Auto: zones follow occupancy and prices. Long absence: everyone away for days, zones at eco and no cooling."
   },
   "values": [
     {
@@ -17,12 +17,6 @@
       "id": "long_absence",
       "title": {
         "en": "Long absence"
-      }
-    },
-    {
-      "id": "off",
-      "title": {
-        "en": "Off"
       }
     }
   ],

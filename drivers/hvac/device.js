@@ -9,7 +9,7 @@ const SEASONS = ['heating', 'cooling', 'off'];
 // Season is shown with the standard thermostat_mode capability.
 const SEASON_MODE = { heating: 'heat', cooling: 'cool', off: 'off' };
 const MODE_SEASON = { heat: 'heating', cool: 'cooling', off: 'off' };
-const MASTER_MODES = ['auto', 'long_absence', 'off'];
+const MASTER_MODES = ['auto', 'long_absence'];
 
 // An outdoor temperature not updated for this long counts as unknown.
 const OUTDOOR_MAX_AGE_MS = 3 * 60 * 60 * 1000;
@@ -208,8 +208,6 @@ module.exports = class hvacDevice extends mainDevice {
    * @param {string} input - JSON array of prices from local midnight
    */
   async onAction_IMPORT_PRICES(day, input) {
-    const settings = this.getSettings();
-    const resolution = Number(settings.price_resolution);
     const timeZone = this.homey.clock.getTimezone();
     const now = Date.now();
     const today = localDate(timeZone, now);
@@ -222,11 +220,14 @@ module.exports = class hvacDevice extends mainDevice {
       return false;
     }
 
+    // 15- or 60-minute prices, from the number of values; a partial tomorrow keeps today's resolution.
+    const days = this.getStoreValue('prices') || {};
+    const known = day === 'tomorrow' && days[today] ? days[today].resolution : null;
+    const resolution = prices.detectResolution(parsed.values.length, timeZone, date, known);
     const { slots } = prices.dayInfo(timeZone, date, resolution);
-    const check = prices.checkDay(parsed.values, slots, resolution, day);
+    const check = prices.checkDay(parsed.values, slots, day);
     if (!check.ok) return this.rejectImport(day, check.error, check.args);
 
-    const days = this.getStoreValue('prices') || {};
     const entry = prices.mergeDay(days[date], parsed.values, resolution, now);
     if (entry) {
       days[date] = entry;
@@ -257,7 +258,7 @@ module.exports = class hvacDevice extends mainDevice {
       days: this.getStoreValue('prices') || {},
       timeZone,
       now,
-      resolution: Number(settings.price_resolution),
+      resolution: this.priceResolution(),
       model: settings.price_model,
       pct: settings.price_above_average_pct,
       minDelta: settings.price_min_delta
@@ -271,6 +272,15 @@ module.exports = class hvacDevice extends mainDevice {
 
     if (!firstRun && wasExpensive !== result.expensive) await this.homey.app.onSharedStateChanged();
     return result;
+  }
+
+  /**
+   * @description Resolution of today's imported prices (15 or 60 minutes), 15 when none.
+   */
+  priceResolution() {
+    const timeZone = this.homey.clock.getTimezone();
+    const entry = (this.getStoreValue('prices') || {})[localDate(timeZone, Date.now())];
+    return entry ? entry.resolution : 15;
   }
 
   reasonText(reasons) {
@@ -303,8 +313,7 @@ module.exports = class hvacDevice extends mainDevice {
    * @description Daily check: fire "Prices missing for tomorrow" when tomorrow is still empty or partial.
    */
   async checkTomorrow(now) {
-    const settings = this.getSettings();
-    const resolution = Number(settings.price_resolution);
+    const resolution = this.priceResolution();
     const timeZone = this.homey.clock.getTimezone();
     const tomorrow = addDays(localDate(timeZone, now), 1);
     const entry = (this.getStoreValue('prices') || {})[tomorrow];

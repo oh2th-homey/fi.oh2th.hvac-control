@@ -78,31 +78,6 @@
           }
         },
         {
-          "id": "price_resolution",
-          "type": "dropdown",
-          "label": {
-            "en": "Price resolution"
-          },
-          "value": "15",
-          "hint": {
-            "en": "Length of one price slot in the imported prices."
-          },
-          "values": [
-            {
-              "id": "15",
-              "label": {
-                "en": "15 minutes"
-              }
-            },
-            {
-              "id": "60",
-              "label": {
-                "en": "60 minutes"
-              }
-            }
-          ]
-        },
-        {
           "id": "price_model",
           "type": "dropdown",
           "label": {

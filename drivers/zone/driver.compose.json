@@ -11,7 +11,6 @@
     "measure_humidity",
     "enum_zone_mode",
     "power_boost",
-    "num_follow_home_hours",
     "is_eco",
     "text_reason",
     "alarm_problem"
@@ -222,51 +221,14 @@
       },
       "children": [
         {
-          "id": "price_use",
+          "id": "price_peak",
           "type": "dropdown",
           "label": {
-            "en": "Use prices"
-          },
-          "value": "both",
-          "hint": {
-            "en": "When an expensive quarter changes this zone."
-          },
-          "values": [
-            {
-              "id": "both",
-              "label": {
-                "en": "Heating and cooling"
-              }
-            },
-            {
-              "id": "heating",
-              "label": {
-                "en": "Heating only"
-              }
-            },
-            {
-              "id": "cooling",
-              "label": {
-                "en": "Cooling only"
-              }
-            },
-            {
-              "id": "never",
-              "label": {
-                "en": "Never"
-              }
-            }
-          ]
-        },
-        {
-          "id": "price_action",
-          "type": "dropdown",
-          "label": {
-            "en": "When expensive"
+            "en": "At price peaks"
           },
           "value": "eco",
           "hint": {
-            "en": "Eco: the eco setpoint. Off: the zone's devices are switched off."
+            "en": "Eco: the eco setpoint. Off: the zone's devices are switched off. Ignore: prices do not change this zone."
           },
           "values": [
             {
@@ -279,6 +241,12 @@
               "id": "off",
               "label": {
                 "en": "Off"
+              }
+            },
+            {
+              "id": "ignore",
+              "label": {
+                "en": "Ignore"
               }
             }
           ]
@@ -370,23 +338,6 @@
           }
         },
         {
-          "id": "hysteresis",
-          "type": "number",
-          "label": {
-            "en": "Setpoint hysteresis"
-          },
-          "value": 0.2,
-          "min": 0,
-          "max": 1,
-          "step": 0.1,
-          "units": {
-            "en": "°C"
-          },
-          "hint": {
-            "en": "A thermostat moves to the next step only when the target passes the midpoint by this much."
-          }
-        },
-        {
           "id": "relay_min_minutes",
           "type": "number",
           "label": {
@@ -401,23 +352,6 @@
           },
           "hint": {
             "en": "Protects relays and heaters from rapid switching."
-          }
-        },
-        {
-          "id": "sensor_stale_minutes",
-          "type": "number",
-          "label": {
-            "en": "Sensor timeout"
-          },
-          "value": 0,
-          "min": 0,
-          "max": 1440,
-          "step": 10,
-          "units": {
-            "en": "min"
-          },
-          "hint": {
-            "en": "A climate sensor is used while it is available in Homey. Optionally also ignore a reading not updated for this long. 0: off, for sensors that only report changes or are set by flows."
           }
         }
       ]

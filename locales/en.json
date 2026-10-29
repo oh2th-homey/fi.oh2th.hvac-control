@@ -85,7 +85,6 @@
     "not_json": "not JSON",
     "not_array": "not a list",
     "not_numeric": "not numbers",
-    "wrong_resolution": "__count__ values, set resolution to __other__ min",
     "too_many": "__count__ values, day has __slots__",
     "today_incomplete": "__count__ of __slots__ values"
   },
@@ -94,7 +93,6 @@
     "controller_fallback": "Controller missing: comfort",
     "manual": "Manual",
     "zone_off": "Zone off",
-    "master_off": "Mode off",
     "long_absence": "Long absence: eco",
     "season_off": "Season off",
     "boost": "Boost __target__ until __until__",

@@ -34,7 +34,6 @@ test('cooling inverts the band', () => {
 test('off: zone off, master off, season off, cooling without cooling', () => {
   for (const [shared, z, code] of [
     [{}, { mode: 'off' }, 'zone_off'],
-    [{ masterMode: 'off' }, {}, 'master_off'],
     [{ season: 'off' }, {}, 'season_off'],
     [{ season: 'cooling' }, { hasCooling: false, cool: null }, 'no_cooling'],
     [{ masterMode: 'long_absence', season: 'cooling' }, {}, 'long_absence_cooling']
@@ -77,7 +76,6 @@ test('heat all year: heating in the cooling and off seasons', () => {
   const summer = decide({ season: 'cooling' }, { heatAllYear: true });
   assert.deepStrictEqual([summer.action, summer.target, summer.season], ['heat', 21, 'heating']);
   assert.strictEqual(decide({ season: 'off' }, { heatAllYear: true }).action, 'heat');
-  assert.strictEqual(decide({ masterMode: 'off' }, { heatAllYear: true }).action, 'off');
 });
 
 test('outdoor limit: heat only when cold enough, dead band keeps the state', () => {
@@ -97,10 +95,9 @@ test('occupancy rule always comfort: comfort when away, price still applies', ()
 });
 
 test('price use per zone and off when expensive', () => {
-  assert.strictEqual(decide({ expensive: true }, { priceUse: 'cooling' }).aim, 'comfort');
-  assert.strictEqual(decide({ expensive: true, season: 'cooling' }, { priceUse: 'cooling' }).aim, 'eco');
-  assert.strictEqual(decide({ expensive: true }, { priceUse: 'never' }).aim, 'comfort');
-  const offExpensive = decide({ expensive: true }, { priceAction: 'off' });
+  assert.strictEqual(decide({ expensive: true, season: 'cooling' }).aim, 'eco');
+  assert.strictEqual(decide({ expensive: true }, { pricePeak: 'ignore' }).aim, 'comfort');
+  const offExpensive = decide({ expensive: true }, { pricePeak: 'off' });
   assert.deepStrictEqual([offExpensive.action, offExpensive.offCause, offExpensive.priceDriven], ['off', 'expensive_off', true]);
 });
 
@@ -277,7 +274,7 @@ test('long absence: an A/C with eco fan heats at eco and runs fan only while the
 
 test('a price peak replaces the presence reason; fan gets a device note', () => {
   assert.deepStrictEqual(decide({ expensive: true }).reasons.map((r) => r.code), ['expensive']);
-  assert.deepStrictEqual(decide({ expensive: true }, { priceAction: 'off' }).reasons.map((r) => r.code), ['expensive_off']);
+  assert.deepStrictEqual(decide({ expensive: true }, { pricePeak: 'off' }).reasons.map((r) => r.code), ['expensive_off']);
   const ac = { control: 'ac', ecoMode: 'fan', seasonOffMode: 'fan', modes: ['heat', 'cool', 'fan', 'off'], min: 10, max: 30, step: 1 };
   assert.deepStrictEqual(pipeline.memberPlan(decide({ occupancy: 'away' }), ac).reasons.map((r) => r.code), ['fan']);
   assert.deepStrictEqual(pipeline.memberPlan(decide({ season: 'off' }), ac).reasons.map((r) => r.code), ['fan']);

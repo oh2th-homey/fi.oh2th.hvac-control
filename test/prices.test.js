@@ -89,13 +89,22 @@ test('parsePrices accepts the token forms', () => {
   assert.deepStrictEqual(prices.parsePrices('[0.1,"x"]'), { error: 'not_numeric' });
 });
 
-test('checkDay: full, partial, wrong resolution', () => {
-  assert.deepStrictEqual(prices.checkDay(Array(96).fill(1), 96, 15, 'today'), { ok: true, partial: false });
-  assert.strictEqual(prices.checkDay(Array(40).fill(1), 96, 15, 'today').error, 'today_incomplete');
-  assert.deepStrictEqual(prices.checkDay(Array(40).fill(1), 96, 15, 'tomorrow'), { ok: true, partial: true });
-  assert.strictEqual(prices.checkDay(Array(24).fill(1), 96, 15, 'today').error, 'wrong_resolution');
-  assert.strictEqual(prices.checkDay(Array(96).fill(1), 24, 60, 'today').error, 'wrong_resolution');
-  assert.strictEqual(prices.checkDay(Array(101).fill(1), 100, 15, 'tomorrow').error, 'too_many');
+test('checkDay: full, partial, too many', () => {
+  assert.deepStrictEqual(prices.checkDay(Array(96).fill(1), 96, 'today'), { ok: true, partial: false });
+  assert.strictEqual(prices.checkDay(Array(40).fill(1), 96, 'today').error, 'today_incomplete');
+  assert.deepStrictEqual(prices.checkDay(Array(40).fill(1), 96, 'tomorrow'), { ok: true, partial: true });
+  assert.strictEqual(prices.checkDay(Array(101).fill(1), 100, 'tomorrow').error, 'too_many');
+});
+
+test('resolution detected from the number of values', () => {
+  assert.strictEqual(prices.detectResolution(96, TZ, '2026-11-10'), 15);
+  assert.strictEqual(prices.detectResolution(24, TZ, '2026-11-10'), 60);
+  assert.strictEqual(prices.detectResolution(25, TZ, '2026-10-25'), 60);
+  assert.strictEqual(prices.detectResolution(100, TZ, '2026-10-25'), 15);
+  // A partial tomorrow keeps today's resolution: 4 quarters, or 4 hours.
+  assert.strictEqual(prices.detectResolution(4, TZ, '2026-11-11', 15), 15);
+  assert.strictEqual(prices.detectResolution(4, TZ, '2026-11-11', 60), 60);
+  assert.strictEqual(prices.detectResolution(96, TZ, '2026-11-11', 60), 15);
 });
 
 test('mergeDay: longer wins, empty keeps', () => {

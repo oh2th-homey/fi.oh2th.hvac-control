@@ -14,6 +14,9 @@ const ECO_COOL = 'target_temperature.eco_cool';
 const COOL_OPTIONS = { title: { en: 'Comfort cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
 const ECO_COOL_OPTIONS = { title: { en: 'Eco cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
 const FOLLOW_STEP_MS = 24 * 60 * 60 * 1000;
+const FOLLOW_CAP = 'num_follow_home_hours';
+// A thermostat moves to the next step only when the target passes the midpoint by this much (°C).
+const SETPOINT_HYSTERESIS = 0.2;
 const DEFAULTS = { [HEAT]: 21, [ECO]: 19, [COOL]: 24, [ECO_COOL]: 26, enum_zone_mode: 'auto', power_boost: false };
 // Comfort and eco stay in order: eco heat never above comfort heat, eco cool never below comfort cool.
 // Changing one moves its partner along when they would cross.
@@ -43,6 +46,7 @@ module.exports = class zoneDevice extends mainDevice {
     this.issues = [];
     this.lastShared = this.getStoreValue('lastShared') || null;
     this.memberState = this.getStoreValue('memberState') || {};
+    await this.migratePriceSetting();
   }
 
   async onDeleted() {
@@ -75,6 +79,8 @@ module.exports = class zoneDevice extends mainDevice {
   async checkCapabilities() {
     const capabilities = [...(this.driver.manifest.capabilities || [])];
     if (this.getSetting('has_cooling')) capabilities.push(COOL, ECO_COOL);
+    // Follow home shows only while it runs.
+    if (this.followUntil(Date.now())) capabilities.push(FOLLOW_CAP);
     const setback = this.hasCapability('num_setback') ? this.getCapabilityValue('num_setback') : null;
     if (typeof setback === 'number') await this.setStoreValue('setback', setback).catch(this.error);
     const result = await updateCapabilities(this, capabilities, this.getCapabilities());
@@ -263,18 +269,6 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   /**
-   * @description Set the occupancy rule: follows home, always eco or always comfort (flow action).
-   */
-  async onAction_SET_OCCUPANCY_RULE(rule) {
-    this.log(`${this.getName()} - onAction_SET_OCCUPANCY_RULE - ${rule}`);
-    if (!['follows', 'always_eco', 'always_comfort'].includes(rule)) throw new Error(this.homey.__('error.invalid_value', { value: rule }));
-    if (rule === this.getSetting('occupancy_rule')) return false;
-    await this.setSettings({ occupancy_rule: rule });
-    await this.evaluate({ urgent: true });
-    return true;
-  }
-
-  /**
    * @description Follow home for 24 hours more (from now, or from the current end when already following).
    */
   async onAction_ADD_NUM_FOLLOW_HOME_HOURS() {
@@ -300,6 +294,29 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   /**
+   * @description At price peaks: 'eco', 'off' or 'ignore'.
+   */
+  pricePeak() {
+    const value = this.getSetting('price_peak');
+    return ['eco', 'off', 'ignore'].includes(value) ? value : 'eco';
+  }
+
+  /**
+   * @description Zones from before At price peaks: convert Use prices (never → ignore) and When expensive once.
+   */
+  async migratePriceSetting() {
+    if (this.getStoreValue('pricePeakMigrated')) return;
+    const use = this.getSetting('price_use');
+    if (use !== undefined && use !== null) {
+      let peak = this.getSetting('price_action') === 'off' ? 'off' : 'eco';
+      if (use === 'never') peak = 'ignore';
+      await this.setSettings({ price_peak: peak }).catch(this.error);
+      this.log(`${this.getName()} - migratePriceSetting - price_peak ${peak}`);
+    }
+    await this.setStoreValue('pricePeakMigrated', true).catch(this.error);
+  }
+
+  /**
    * @description End of Follow home (ms), or null when off or run out.
    */
   followUntil(ms) {
@@ -316,7 +333,9 @@ module.exports = class zoneDevice extends mainDevice {
     const until = this.followUntil(ms);
     const ended = typeof stored === 'number' && until === null;
     if (ended) await this.unsetStoreValue('followUntil');
-    await this.setValue('num_follow_home_hours', until ? Math.ceil((until - ms) / 3600000) : 0);
+    // Add the capability when Follow home starts, remove it when it ends.
+    if (!!until !== this.hasCapability(FOLLOW_CAP)) await this.checkCapabilities();
+    if (until) await this.setValue(FOLLOW_CAP, Math.ceil((until - ms) / 3600000));
     return ended;
   }
 
@@ -457,14 +476,12 @@ module.exports = class zoneDevice extends mainDevice {
    * @description Zone temperature and humidity: average of the available sensors' readings.
    */
   updateClimate(ms) {
-    // A reading is used while the sensor is available; the optional timeout (0 = off) also drops old values.
-    const staleMs = this.getSetting('sensor_stale_minutes') * 60000;
+    // A reading is used while the sensor is available in Homey.
     const average = (cap) => {
       const values = [];
       for (const member of this.getMembers().filter((m) => m.sensor)) {
         const reading = this.members.read(member.id, cap === 'measure_temperature' ? member.temperatureCap || cap : cap);
         if (!reading || typeof reading.value !== 'number' || !reading.available) continue;
-        if (staleMs > 0 && reading.lastUpdated && ms - reading.lastUpdated.getTime() > staleMs) continue;
         values.push(reading.value);
       }
       return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
@@ -528,8 +545,7 @@ module.exports = class zoneDevice extends mainDevice {
         followUntil: this.followUntil(ms),
         windowOpen,
         heatAllYear: this.getSetting('heat_all_year') === true,
-        priceUse: this.getSetting('price_use'),
-        priceAction: this.getSetting('price_action'),
+        pricePeak: this.pricePeak(),
         outdoorLimit: { enabled: this.getSetting('outdoor_limit') === true, onBelow: this.getSetting('outdoor_on_below'), offAbove: this.getSetting('outdoor_off_above') },
         outdoorAllowed: this.getStoreValue('outdoorAllowed')
       },
@@ -603,7 +619,7 @@ module.exports = class zoneDevice extends mainDevice {
         for (const reason of sp.reasons) this.issue(member, reason.code, reason.args, reason.code === 'invalid');
         if (sp.value === null) continue;
         let { value } = sp;
-        if (pipeline.keepWritten(sp.raw, value, st.written, member.step, this.getSetting('hysteresis'))) value = st.written;
+        if (pipeline.keepWritten(sp.raw, value, st.written, member.step, SETPOINT_HYSTERESIS)) value = st.written;
 
         const reading = this.members.read(member.id, 'target_temperature');
         const kind = typeof st.written === 'number' && reading ? pipeline.classifyReport(reading.value, st.written, member) : 'unknown';

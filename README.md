@@ -27,14 +27,14 @@ hour. After that they heat to comfort and ignore prices.
   (nobody is home). Set it with the **Set occupancy** card, for example from presence or a
   geofence.
 - **Season**: Heating, Cooling or Off.
-- **Mode**: Auto, Long absence or Off. Long absence is for trips of several days: all zones go
-  to eco and nothing cools. Off stops all heating and cooling.
+- **Mode**: Auto or Long absence. Long absence is for trips of several days: all zones go to eco
+  and nothing cools. To stop all heating and cooling, set the season to Off.
 - **Price now**, in the currency set in the settings (default €).
 - **Expensive now**: on during a price peak.
 - **Outdoor temperature**, from the **Set outdoor temperature** card. Zones with an outdoor
   limit use it.
 
-Settings: currency, price resolution (15 or 60 minutes), price model, minimum price difference,
+Settings: currency, price model, minimum price difference,
 percentage for the Above average model, the time of the daily check for tomorrow's prices, and
 the last day of a long absence.
 
@@ -56,7 +56,8 @@ The zone shows:
   the zone's devices off.
 - **Boost**: comfort plus the boost amount for the boost time. Press it again to stop early.
 - **Target now**: the temperature the zone aims at right now.
-- **Follow home**: hours left of a temporary Follow home (see Guests in the guest room).
+- **Follow home**: hours left, shown only while a temporary Follow home runs (see Guests in the
+  guest room).
 - The zone temperature and humidity, and a **Reason** that explains what the zone does.
 
 Zone settings:
@@ -68,11 +69,9 @@ Zone settings:
 - **Boost amount** and **Boost time**.
 - **Eco after door/window open**: how long a door or window may be open before the zone goes to
   eco (default 2 minutes).
-- **Use prices** (in heating and cooling, only one of them, or never) and **When expensive**
-  (eco, or switch the zone off).
+- **At price peaks**: Eco (default), Off (switch the zone's devices off) or Ignore.
 - **Heat only when cold outside**, with **Heat below** and **Stop above**.
-- **Hand change hold time**, **Setpoint hysteresis**, **Relay minimum on and off time** and
-  **Sensor timeout**.
+- **Hand change hold time** and **Relay minimum on and off time**.
 
 ### Temperature units
 
@@ -155,7 +154,7 @@ HVAC Controller
 Heating Zone
 
 - Actions: **Set zone mode**, **Boost zone** (for a number of minutes), **Set eco heat**,
-  **Set comfort cool**, **Set eco cool**, **Set occupancy rule**, **Follow home for 24 hours**,
+  **Set comfort cool**, **Set eco cool**, **Follow home for 24 hours**,
   **Use own occupancy setting**.
 - Conditions: **Zone mode is**, **Zone is in eco**.
 - Triggers: **Eco changed**, **Target changed** (with the reason), **Member write failed**.
@@ -188,8 +187,9 @@ goes back to Always eco.
      0.005 per kWh) above the local median, so cheap and flat days have no peaks.
    - **Above average**: every quarter more than the percentage (default 30 %) above today's
      average counts.
-3. During a peak the controller shows **Expensive now**. Zones that use prices go to eco, or
-   off if **When expensive** is Off, and return when the peak ends.
+3. During a peak the controller shows **Expensive now**. Zones go to eco, or off if their **At
+   price peaks** setting is Off, and return when the peak ends. Zones set to Ignore stay as they
+   are.
 
 Use **Expensive now changed** or **Price is expensive** for other things that should follow the
 price, such as a water heater.
@@ -202,7 +202,7 @@ price, such as a water heater.
    for at least the **Relay minimum on and off time** (default 5 minutes). In eco the target is
    lower, so the heater stays off until the room cools below it.
 3. Without a temperature from an available sensor the relay stays off and the zone shows a
-   problem. Set **Sensor timeout** only if you want old readings ignored.
+   problem.
 
 If relay off means heating in your wiring, tick **Inverted** for that relay.
 
@@ -274,12 +274,11 @@ The HVAC Controller shows the price reason, for example `Normal` or `Peak (over 
 ## Troubleshooting
 
 - **"No temperature, off"**: the zone has relays but no working temperature
-  sensor. Check that the sensor is available in Homey. With **Sensor timeout** set, a sensor that
-  has not reported for that long also counts as missing.
+  sensor. Check that the sensor is available in Homey.
 - **"Controller missing"**: the controller is unavailable or
   removed. After one hour the zones heat to comfort, ignore prices and show a problem.
-- **Prices rejected**: the controller's reason says why, for example hourly prices while the
-  price resolution is 15 minutes. The previous prices are kept.
+- **Prices rejected**: the controller's reason says why, for example today's prices with too few
+  values. 15- and 60-minute prices are both accepted. The previous prices are kept.
 - **A thermostat does not keep its setpoint, or falls back to 4 °C**: the zone writes it again,
   then tries once with a whole degree. If that fails too, the zone shows a problem, fires
   **Member write failed** and tries again later. If the device only takes whole degrees, set its
