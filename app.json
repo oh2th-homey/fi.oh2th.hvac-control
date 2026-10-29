@@ -832,6 +832,17 @@
           }
         }
       },
+      "pair": [
+        {
+          "id": "outdoor"
+        }
+      ],
+      "repair": [
+        {
+          "id": "outdoor"
+        }
+      ],
+      "id": "hvac",
       "settings": [
         {
           "type": "group",
@@ -955,18 +966,7 @@
             }
           ]
         }
-      ],
-      "pair": [
-        {
-          "id": "outdoor"
-        }
-      ],
-      "repair": [
-        {
-          "id": "outdoor"
-        }
-      ],
-      "id": "hvac"
+      ]
     },
     {
       "platforms": [
@@ -1059,6 +1059,7 @@
           }
         }
       ],
+      "id": "zone",
       "settings": [
         {
           "type": "group",
@@ -1291,7 +1292,7 @@
                 "en": "Relay minimum on and off time"
               },
               "value": 5,
-              "min": 0,
+              "min": 1,
               "max": 60,
               "step": 1,
               "units": {
@@ -1303,8 +1304,7 @@
             }
           ]
         }
-      ],
-      "id": "zone"
+      ]
     }
   ],
   "capabilities": {

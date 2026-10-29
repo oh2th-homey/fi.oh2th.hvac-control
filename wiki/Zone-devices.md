@@ -15,6 +15,10 @@ A zone can have:
   `measure_temperature.local`, choose which one on the configure page.
 - **Windows and doors**: contact sensors.
 
+Only heating, cooling and room devices are listed (thermostats, heaters, radiators, air
+conditioners, heat pumps, relays, plugs, sensors, fans and air purifiers, and devices of the class
+Other), so an appliance such as a fridge, oven or water heater can't be picked by mistake.
+
 ## Options per device
 
 These are on the configure page, when adding the zone or in Repair.

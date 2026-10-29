@@ -297,3 +297,12 @@ test('air conditioner detection: class or A/C-only modes, not the standard cool 
   assert.strictEqual(isAirConditioner('thermostat', ['heat', 'cool', 'fan', 'off']), true);
   assert.strictEqual(isAirConditioner('airconditioning', []), false);
 });
+
+test('relay band needs at least 0.2 °C between on and off', () => {
+  assert.strictEqual(pipeline.validRelayBand(0.3, 0.3), true);
+  assert.strictEqual(pipeline.validRelayBand(1.0, -0.5), true);
+  assert.strictEqual(pipeline.validRelayBand(0.1, 0.1), true);
+  assert.strictEqual(pipeline.validRelayBand(0.1, 0.05), false);
+  assert.strictEqual(pipeline.validRelayBand(0.5, -0.4), false);
+  assert.strictEqual(pipeline.validRelayBand(NaN, 0.3), false);
+});

@@ -1,0 +1,124 @@
+[
+  {
+    "type": "group",
+    "label": {
+      "en": "Prices"
+    },
+    "children": [
+      {
+        "id": "currency",
+        "type": "text",
+        "label": {
+          "en": "Currency"
+        },
+        "value": "€",
+        "hint": {
+          "en": "Currency of the imported prices, for example € or kr."
+        }
+      },
+      {
+        "id": "price_model",
+        "type": "dropdown",
+        "label": {
+          "en": "Price model"
+        },
+        "value": "rate_is_highest",
+        "hint": {
+          "en": "When the price counts as expensive. Rate is highest: short local price peaks (needs 15-minute prices; with hourly prices Above average is used). Above average: see the Above average group. Off: occupancy alone decides."
+        },
+        "values": [
+          {
+            "id": "rate_is_highest",
+            "label": {
+              "en": "Rate is highest"
+            }
+          },
+          {
+            "id": "above_average",
+            "label": {
+              "en": "Above average"
+            }
+          },
+          {
+            "id": "off",
+            "label": {
+              "en": "Off"
+            }
+          }
+        ]
+      },
+      {
+        "id": "price_min_delta",
+        "type": "number",
+        "label": {
+          "en": "Minimum price difference"
+        },
+        "value": 0.005,
+        "min": 0,
+        "max": 1,
+        "step": 0.001,
+        "units": {
+          "en": "per kWh"
+        },
+        "hint": {
+          "en": "Both models: a price must be at least this much above the median or average to count as expensive, so cheap and flat days are not flagged."
+        }
+      },
+      {
+        "id": "tomorrow_check_time",
+        "type": "text",
+        "label": {
+          "en": "Check tomorrow's prices at"
+        },
+        "value": "16:00",
+        "hint": {
+          "en": "Local time (HH:mm) of the daily check. The trigger Prices missing for tomorrow runs when tomorrow's prices are still missing or partial."
+        }
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "en": "Above average model"
+    },
+    "children": [
+      {
+        "id": "price_above_average_pct",
+        "type": "number",
+        "label": {
+          "en": "Percentage above average"
+        },
+        "value": 30,
+        "min": 0,
+        "max": 500,
+        "step": 1,
+        "units": {
+          "en": "%"
+        },
+        "hint": {
+          "en": "An expensive quarter is more than this above today's average."
+        }
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "en": "Long absence"
+    },
+    "children": [
+      {
+        "id": "absence_until",
+        "type": "text",
+        "label": {
+          "en": "Long absence until"
+        },
+        "value": "",
+        "hint": {
+          "en": "Last day of a long absence as YYYY-MM-DD. Setting a day starts long absence; it ends after that day. Empty: no end date."
+        }
+      }
+    ]
+  }
+]

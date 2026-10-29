@@ -48,7 +48,8 @@
       const temps = sensor ? sensor.temperatures : [];
       for (const cap of temps) {
         const twin = temps.filter((other) => other.title === cap.title).length > 1;
-        capEl.appendChild(option(cap.id, twin ? `${cap.title} (${cap.id})` : cap.title));
+        const title = twin ? `${cap.title} (${cap.id})` : cap.title;
+        capEl.appendChild(option(cap.id, cap.reading ? `${title}: ${cap.reading}` : title));
       }
       if (selected && temps.some((cap) => cap.id === selected)) capEl.value = selected;
       capGroup.style.display = temps.length > 1 ? '' : 'none';
@@ -80,7 +81,12 @@
         sensors = result.sensors;
         repair = result.repair === true;
         sensorEl.appendChild(option('', Homey.__('pair.outdoor.none')));
-        for (const sensor of sensors) sensorEl.appendChild(option(sensor.id, sensor.zone ? `${sensor.zone} · ${sensor.name}` : sensor.name));
+        for (const sensor of sensors) {
+          const name = sensor.zone ? `${sensor.zone} · ${sensor.name}` : sensor.name;
+          // The current reading helps to spot the real outdoor sensor among the indoor ones.
+          const { reading } = sensor.temperatures[0];
+          sensorEl.appendChild(option(sensor.id, reading ? `${name} (${reading})` : name));
+        }
         sensorEl.value = result.outdoor ? result.outdoor.id : '';
         showCaps(result.outdoor ? result.outdoor.cap : null);
       } catch (error) {

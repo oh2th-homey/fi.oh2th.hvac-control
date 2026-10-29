@@ -76,6 +76,7 @@ drivers/main-device.js      shared Device base class: lifecycle, listeners, setV
 drivers/<id>/device.js      `class extends mainDevice {}`, overrides only what differs
 drivers/<id>/driver.js      `class extends mainDriver {}`
 drivers/<id>/driver.compose.json   name + "$extends" of templates
+drivers/<id>/driver.settings.compose.json   the device settings (array), not in driver.compose.json
 drivers/<id>/pair/*.html
 lib/helpers.js              app-specific helpers only (generic ones: oh2th-homey-helpers)
 lib/flows/actions.js        exports.init(ctx): register action run listeners

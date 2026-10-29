@@ -29,7 +29,7 @@
       "relay_off": "Off at target plus (°C)",
       "relay_preview": "Target __target__ °C: on at __on__ °C, off at __off__ °C.",
       "relay_band_hint": "Negative off value: off below the target. Extra heat example: on 1.0, off −0.5.",
-      "error_relay_band": "__name__: the off temperature must be above the on temperature.",
+      "error_relay_band": "__name__: the off temperature must be at least 0.2 °C above the on temperature.",
       "sensor_temperature": "Temperature sensor",
       "sensor_humidity": "Humidity sensor",
       "sensor_both": "Temperature and humidity sensor",

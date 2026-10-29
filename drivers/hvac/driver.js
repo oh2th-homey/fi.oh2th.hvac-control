@@ -31,7 +31,7 @@ module.exports = class hvacDriver extends mainDriver {
   async outdoorSensors() {
     const candidates = await this.homey.app.members.candidates();
     const sensors = candidates.filter((device) => device.temperatures.length > 0).map(({ id, name, zone, temperatures }) => ({ id, name, zone, temperatures }));
-    this.log(`outdoorSensors - ${sensors.length} of ${candidates.length} devices: ${sensors.map((sensor) => sensor.name).join(', ')}`);
+    this.log(`outdoorSensors - ${sensors.length} of ${candidates.length} devices`);
     return sensors;
   }
 

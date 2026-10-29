@@ -96,7 +96,10 @@
     // A sensor with several temperature capabilities (e.g. measure_temperature.local): choose which one the zone reads.
     function temperatureChoices(device) {
       const temps = device.temperatures || [];
-      return temps.map((cap) => [cap.id, temps.filter((other) => other.title === cap.title).length > 1 ? `${cap.title} (${cap.id})` : cap.title]);
+      return temps.map((cap) => {
+        const title = temps.filter((other) => other.title === cap.title).length > 1 ? `${cap.title} (${cap.id})` : cap.title;
+        return [cap.id, cap.reading ? `${title}: ${cap.reading}` : title];
+      });
     }
 
     function render() {

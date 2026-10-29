@@ -14,6 +14,8 @@ const ECO_COOL = 'target_temperature.eco_cool';
 const COOL_OPTIONS = { title: { en: 'Comfort cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
 const ECO_COOL_OPTIONS = { title: { en: 'Eco cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
 const FOLLOW_STEP_MS = 24 * 60 * 60 * 1000;
+// Boost from a flow token is capped like the card's own limit.
+const MAX_BOOST_MINUTES = 1440;
 // A setpoint changed by hand on a device is restored after this long.
 const MANUAL_HOLD_MS = 30 * 60 * 1000;
 const FOLLOW_CAP = 'num_follow_home_hours';
@@ -227,7 +229,7 @@ module.exports = class zoneDevice extends mainDevice {
    * @description Boost for the given minutes; a boost also returns the zone to auto.
    */
   async startBoost(minutes) {
-    const until = Date.now() + Math.max(1, Number(minutes) || this.getSetting('boost_minutes')) * 60000;
+    const until = Date.now() + Math.min(MAX_BOOST_MINUTES, Math.max(1, Number(minutes) || this.getSetting('boost_minutes'))) * 60000;
     await this.setStoreValue('boostUntil', until);
     await this.setValue('power_boost', true);
     await this.setValue('enum_zone_mode', 'auto');
@@ -762,7 +764,7 @@ module.exports = class zoneDevice extends mainDevice {
     if (!this.decision) return;
     const issue = (...args) => report && this.issue(...args);
     const settings = this.getSettings();
-    const minMs = settings.relay_min_minutes * 60000;
+    const minMs = Math.max(1, settings.relay_min_minutes) * 60000;
     let saved = false;
     for (const member of this.getMembers().filter((m) => m.control === 'relay')) {
       try {
