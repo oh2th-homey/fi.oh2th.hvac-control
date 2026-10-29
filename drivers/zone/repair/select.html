@@ -1,5 +1,5 @@
 <!-- Page 1: pick the zone's devices, per room. Homey's own Continue button goes to page 2; every change is saved
-     to the session at once. Repair copy of drivers/zone/pair/select.html with REPAIR = true. -->
+     to the session at once. The same file serves pair and repair (drivers/zone/repair/select.html, kept identical by a test). -->
 <style>
   .hz-room { margin-top: 1.2em; }
   .hz-device { padding: 0.5em 0; border-bottom: 1px solid var(--homey-color-mono-100, #eee); }
@@ -26,7 +26,8 @@
 <script type="application/javascript">
   (function () {
     // Own scope: Homey loads pairing views into one document, so top-level const/let would clash between pages.
-    const REPAIR = true;
+    // Repair (set from the session) edits a running zone: no name.
+    let repair = false;
     const roomsEl = document.getElementById('sel-rooms');
     const errorEl = document.getElementById('sel-error');
     const nameEl = document.getElementById('sel-zone-name');
@@ -103,7 +104,7 @@
     }
 
     async function save() {
-      const name = REPAIR ? null : nameEl.value.trim() || t('default_name');
+      const name = repair ? null : nameEl.value.trim() || t('default_name');
       await Homey.emit('select', { name, members: collect() }).catch((error) => {
         errorEl.textContent = error.message || String(error);
       });
@@ -111,13 +112,13 @@
 
     roomsEl.addEventListener('change', save);
     nameEl.addEventListener('input', save);
-    if (REPAIR) document.getElementById('sel-name-group').style.display = 'none';
 
     Homey.showLoadingOverlay();
     (async () => {
       try {
-        if (!REPAIR) await Homey.emit('check_controller');
-        const { candidates: list, name, members } = await Homey.emit('get_selection');
+        const { candidates: list, name, members, repair: isRepair } = await Homey.emit('get_selection');
+        repair = isRepair === true;
+        if (repair) document.getElementById('sel-name-group').style.display = 'none';
         candidates = list;
         if (name) nameEl.value = name;
         render(Object.fromEntries(members.map((member) => [member.id, member])));

@@ -1,6 +1,6 @@
 {
   "title": {
-    "en": "Mode changed"
+    "en": "Long absence changed"
   },
   "args": [
     {
@@ -11,14 +11,12 @@
   ],
   "tokens": [
     {
-      "name": "enum_master_mode",
-      "type": "string",
+      "name": "is_long_absence",
+      "type": "boolean",
       "title": {
-        "en": "Mode"
-      },
-      "example": {
         "en": "Long absence"
-      }
+      },
+      "example": true
     }
   ]
 }

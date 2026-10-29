@@ -6,7 +6,7 @@
   "capabilities": [
     "enum_occupancy",
     "thermostat_mode",
-    "enum_master_mode",
+    "is_long_absence",
     "is_expensive",
     "measure_temperature.outdoor",
     "measure_monetary",
@@ -56,8 +56,7 @@
     }
   },
   "$extends": [
-    "device",
-    "pair-single"
+    "device"
   ],
   "settings": [
     {
@@ -131,7 +130,7 @@
           "label": {
             "en": "Check tomorrow's prices at"
           },
-          "value": "15:00",
+          "value": "16:00",
           "hint": {
             "en": "Local time (HH:mm) of the daily check. The trigger Prices missing for tomorrow runs when tomorrow's prices are still missing or partial."
           }
@@ -177,10 +176,20 @@
           },
           "value": "",
           "hint": {
-            "en": "Last day of a long absence (everyone away for days) as YYYY-MM-DD. While set, the mode is Long absence: zones at eco, no cooling. After this day it returns to Auto. Empty: no end date."
+            "en": "Last day of a long absence as YYYY-MM-DD. Setting a day starts long absence; it ends after that day. Empty: no end date."
           }
         }
       ]
+    }
+  ],
+  "pair": [
+    {
+      "id": "outdoor"
+    }
+  ],
+  "repair": [
+    {
+      "id": "outdoor"
     }
   ]
 }

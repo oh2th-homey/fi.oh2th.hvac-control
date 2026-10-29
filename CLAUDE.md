@@ -20,9 +20,13 @@ Follow <https://apps.developer.homey.app/app-store/guidelines> (checked 2026-10-
 
 - Name max 4 words, no Homey/Athom, no protocol names. Description: catchy one-liner, not
   repeating the name or readme, no "adds support for" phrasing.
-- `README.md` (GitHub) is the **user instructions / how to use**: setup order, devices, settings,
-  flow cards, example flows, troubleshooting. Update it in the same change as any user-visible
-  feature. `README.txt` is only the store blurb.
+- The user guide (how to use: setup order, devices, settings, flow cards, example flows,
+  troubleshooting) lives in `wiki/`, one Markdown page per topic plus `_Sidebar.md`, and is
+  published to the GitHub wiki by `.github/workflows/wiki.yml` on each `v*` tag, so the wiki
+  matches the released app. Never edit the GitHub wiki directly. Update `wiki/` in the same change
+  as any user-visible feature. Wiki links have no `.md`: `[Prices](Prices)`,
+  `[Leave for days](How-to#leave-for-days)`. `README.md` is a short intro with the wiki link.
+  `README.txt` is only the store blurb.
 - `README.txt`: 1–2 plain-text paragraphs, no Markdown, headers, URLs, feature lists or changelog.
   Links go in the manifest; changelog via `.homeychangelog.json` at publish time.
 - App images: jpg/png, small 250×175 + large 500×350 (xlarge 1000×700 optional), lively/lifestyle,
@@ -79,7 +83,8 @@ lib/flows/conditions.js     exports.init(ctx): register condition run listeners
 lib/<name>.js               one class per external API/protocol, plus pure logic modules
 .homeycompose/app.json, capabilities/*.json, flow/{actions,conditions,triggers}/*.json,
 .homeycompose/drivers/templates/*.json   (device.json, settings.json, pair-*.json)
-locales/en.json, assets/, local_assets/ (sources, in .gitignore and .homeyignore), .github/FUNDING.yml
+locales/en.json, assets/, local_assets/ (sources, in .gitignore and .homeyignore), .github/FUNDING.yml,
+.github/workflows/wiki.yml, wiki/ (user guide; wiki/ and .github/ in .homeyignore)
 ```
 
 Lint/format: `.eslintrc.json` extends `athom` (same relaxed rule set as go-e), `.prettierrc`
@@ -156,7 +161,7 @@ immediately); use `.then(() => this.log(…))`.
   devices (thermostats, relays, A/C, sensors) are read and written only through standard
   Homey capabilities, whatever app owns them. Data sources such as prices come in only as
   tokens on this app's own action cards (e.g. Import prices takes a JSON text token). Other
-  apps may appear in README examples only.
+  apps may appear in wiki examples only.
 - Inputs are **facts, not modes** (occupancy, long absence, prices, forecast). Never make the user
   translate facts into modes in flows; that is what made Homey Heating Scheduler too complex.
 - Few concepts: Heating Zone devices, one required HVAC Controller device (shared state), per zone

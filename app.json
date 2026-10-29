@@ -68,31 +68,6 @@
     "triggers": [
       {
         "title": {
-          "en": "Mode changed"
-        },
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=hvac"
-          }
-        ],
-        "tokens": [
-          {
-            "name": "enum_master_mode",
-            "type": "string",
-            "title": {
-              "en": "Mode"
-            },
-            "example": {
-              "en": "Long absence"
-            }
-          }
-        ],
-        "id": "enum_master_mode_changed"
-      },
-      {
-        "title": {
           "en": "Occupancy changed"
         },
         "args": [
@@ -164,6 +139,29 @@
           }
         ],
         "id": "is_expensive_changed"
+      },
+      {
+        "title": {
+          "en": "Long absence changed"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "is_long_absence",
+            "type": "boolean",
+            "title": {
+              "en": "Long absence"
+            },
+            "example": true
+          }
+        ],
+        "id": "is_long_absence_changed"
       },
       {
         "title": {
@@ -411,6 +409,22 @@
           }
         ],
         "id": "is_expensive"
+      },
+      {
+        "title": {
+          "en": "Long absence is on"
+        },
+        "titleFormatted": {
+          "en": "Long absence !{{is|is not}} on"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          }
+        ],
+        "id": "is_long_absence"
       }
     ],
     "actions": [
@@ -429,6 +443,22 @@
           }
         ],
         "id": "add_num_follow_home_hours"
+      },
+      {
+        "title": {
+          "en": "End long absence"
+        },
+        "hint": {
+          "en": "Zones return to following occupancy and prices."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=hvac"
+          }
+        ],
+        "id": "end_long_absence"
       },
       {
         "title": {
@@ -504,7 +534,7 @@
           "en": "Set long absence until [[date]]"
         },
         "hint": {
-          "en": "Everyone is away for days. Starts now: zones go to eco and stop cooling, and return to auto after the given day."
+          "en": "Everyone is away for days. Starts now: zones go to eco and stop cooling until the end of the given day."
         },
         "args": [
           {
@@ -521,46 +551,6 @@
           }
         ],
         "id": "set_absence_until"
-      },
-      {
-        "title": {
-          "en": "Set mode"
-        },
-        "titleFormatted": {
-          "en": "Set mode to [[mode]]"
-        },
-        "hint": {
-          "en": "Auto, long absence or off for all zones. Setting auto also ends a long absence."
-        },
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=hvac"
-          },
-          {
-            "type": "dropdown",
-            "name": "mode",
-            "title": {
-              "en": "Mode"
-            },
-            "values": [
-              {
-                "id": "auto",
-                "title": {
-                  "en": "Auto"
-                }
-              },
-              {
-                "id": "long_absence",
-                "title": {
-                  "en": "Long absence"
-                }
-              }
-            ]
-          }
-        ],
-        "id": "set_enum_master_mode"
       },
       {
         "title": {
@@ -656,35 +646,6 @@
       },
       {
         "title": {
-          "en": "Set outdoor temperature"
-        },
-        "titleFormatted": {
-          "en": "Set outdoor temperature to [[temperature]] °C"
-        },
-        "hint": {
-          "en": "Feed the outdoor temperature from any sensor. Used by zones with an outdoor limit."
-        },
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=hvac"
-          },
-          {
-            "type": "number",
-            "name": "temperature",
-            "title": {
-              "en": "Temperature"
-            },
-            "min": -60,
-            "max": 60,
-            "step": 0.1
-          }
-        ],
-        "id": "set_measure_temperature_outdoor"
-      },
-      {
-        "title": {
           "en": "Boost zone"
         },
         "titleFormatted": {
@@ -718,66 +679,6 @@
       },
       {
         "title": {
-          "en": "Set price model"
-        },
-        "titleFormatted": {
-          "en": "Set price model to [[model]] with [[pct]] %"
-        },
-        "hint": {
-          "en": "Rate is highest flags short price peaks and needs 15-minute prices. Above average flags prices the given percentage above today's average. The percentage is only used by Above average."
-        },
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=hvac"
-          },
-          {
-            "type": "dropdown",
-            "name": "model",
-            "title": {
-              "en": "Price model"
-            },
-            "values": [
-              {
-                "id": "rate_is_highest",
-                "title": {
-                  "en": "Rate is highest"
-                }
-              },
-              {
-                "id": "above_average",
-                "title": {
-                  "en": "Above average"
-                }
-              },
-              {
-                "id": "off",
-                "title": {
-                  "en": "Off"
-                }
-              }
-            ]
-          },
-          {
-            "type": "number",
-            "name": "pct",
-            "title": {
-              "en": "Percentage"
-            },
-            "required": false,
-            "min": 0,
-            "max": 500,
-            "step": 1,
-            "placeholder": {
-              "en": "30"
-            }
-          }
-        ],
-        "id": "set_price_model"
-      },
-      {
-        "title": {
           "en": "Set comfort cool"
         },
         "titleFormatted": {
@@ -801,7 +702,7 @@
           }
         ],
         "hint": {
-          "en": "Only for zones with Has cooling turned on in the zone settings."
+          "en": "Only for zones with an air conditioner."
         },
         "id": "set_target_temperature_cool"
       },
@@ -842,7 +743,7 @@
           "en": "Set eco cool to [[temperature]] °C"
         },
         "hint": {
-          "en": "Only for zones with Has cooling. Not below comfort cool: comfort follows if needed."
+          "en": "Only for zones with an air conditioner. Not below comfort cool: comfort follows if needed."
         },
         "args": [
           {
@@ -875,19 +776,6 @@
         "small": "/drivers/hvac/assets/images/small.png",
         "large": "/drivers/hvac/assets/images/large.png"
       },
-      "pair": [
-        {
-          "id": "list_devices",
-          "template": "list_devices",
-          "navigation": {
-            "next": "add_devices"
-          }
-        },
-        {
-          "id": "add_devices",
-          "template": "add_devices"
-        }
-      ],
       "name": {
         "en": "HVAC Controller"
       },
@@ -895,7 +783,7 @@
       "capabilities": [
         "enum_occupancy",
         "thermostat_mode",
-        "enum_master_mode",
+        "is_long_absence",
         "is_expensive",
         "measure_temperature.outdoor",
         "measure_monetary",
@@ -1016,7 +904,7 @@
               "label": {
                 "en": "Check tomorrow's prices at"
               },
-              "value": "15:00",
+              "value": "16:00",
               "hint": {
                 "en": "Local time (HH:mm) of the daily check. The trigger Prices missing for tomorrow runs when tomorrow's prices are still missing or partial."
               }
@@ -1062,10 +950,20 @@
               },
               "value": "",
               "hint": {
-                "en": "Last day of a long absence (everyone away for days) as YYYY-MM-DD. While set, the mode is Long absence: zones at eco, no cooling. After this day it returns to Auto. Empty: no end date."
+                "en": "Last day of a long absence as YYYY-MM-DD. Setting a day starts long absence; it ends after that day. Empty: no end date."
               }
             }
           ]
+        }
+      ],
+      "pair": [
+        {
+          "id": "outdoor"
+        }
+      ],
+      "repair": [
+        {
+          "id": "outdoor"
         }
       ],
       "id": "hvac"
@@ -1168,17 +1066,6 @@
             "en": "Zone"
           },
           "children": [
-            {
-              "id": "has_cooling",
-              "type": "checkbox",
-              "label": {
-                "en": "Has cooling"
-              },
-              "value": false,
-              "hint": {
-                "en": "The zone has cooling, for example an air conditioner or air-to-air heat pump. Shows the Comfort cool and Eco cool setpoints. Without cooling, the zone's members are off in the cooling season."
-              }
-            },
             {
               "id": "heat_all_year",
               "type": "checkbox",
@@ -1398,23 +1285,6 @@
               }
             },
             {
-              "id": "hold_minutes",
-              "type": "number",
-              "label": {
-                "en": "Hand change hold time"
-              },
-              "value": 30,
-              "min": 0,
-              "max": 240,
-              "step": 5,
-              "units": {
-                "en": "min"
-              },
-              "hint": {
-                "en": "A setpoint changed by hand on a device is restored after this long. All other changes are written at once."
-              }
-            },
-            {
               "id": "relay_min_minutes",
               "type": "number",
               "label": {
@@ -1438,33 +1308,6 @@
     }
   ],
   "capabilities": {
-    "enum_master_mode": {
-      "type": "enum",
-      "title": {
-        "en": "Mode"
-      },
-      "hint": {
-        "en": "Auto: zones follow occupancy and prices. Long absence: everyone away for days, zones at eco and no cooling."
-      },
-      "values": [
-        {
-          "id": "auto",
-          "title": {
-            "en": "Auto"
-          }
-        },
-        {
-          "id": "long_absence",
-          "title": {
-            "en": "Long absence"
-          }
-        }
-      ],
-      "getable": true,
-      "setable": true,
-      "uiComponent": "picker",
-      "icon": "./assets/capabilities/enum_master_mode.svg"
-    },
     "enum_occupancy": {
       "type": "enum",
       "title": {
@@ -1570,6 +1413,26 @@
         "en": "Price became normal"
       },
       "icon": "./assets/capabilities/is_expensive.svg"
+    },
+    "is_long_absence": {
+      "type": "boolean",
+      "title": {
+        "en": "Long absence"
+      },
+      "hint": {
+        "en": "Everyone is away for days: zones at eco and no cooling."
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "button",
+      "insights": true,
+      "insightsTitleTrue": {
+        "en": "Long absence started"
+      },
+      "insightsTitleFalse": {
+        "en": "Long absence ended"
+      },
+      "icon": "./assets/capabilities/is_long_absence.svg"
     },
     "num_follow_home_hours": {
       "type": "number",

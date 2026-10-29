@@ -1,0 +1,36 @@
+# Publish wiki/ to the GitHub wiki on a release tag, so the wiki matches the released app.
+# Run it by hand from the Actions tab to publish without a release.
+name: Publish wiki
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki-repo
+      - name: Copy pages
+        run: rsync -a --delete --exclude .git --exclude .markdownlint.json wiki/ wiki-repo/
+      - name: Commit and push
+        working-directory: wiki-repo
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'Wiki is up to date'
+            exit 0
+          fi
+          git commit -m "Wiki from ${GITHUB_REF_NAME} (${GITHUB_SHA::7})"
+          git push

@@ -14,6 +14,8 @@ const ECO_COOL = 'target_temperature.eco_cool';
 const COOL_OPTIONS = { title: { en: 'Comfort cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
 const ECO_COOL_OPTIONS = { title: { en: 'Eco cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
 const FOLLOW_STEP_MS = 24 * 60 * 60 * 1000;
+// A setpoint changed by hand on a device is restored after this long.
+const MANUAL_HOLD_MS = 30 * 60 * 1000;
 const FOLLOW_CAP = 'num_follow_home_hours';
 // A thermostat moves to the next step only when the target passes the midpoint by this much (°C).
 const SETPOINT_HYSTERESIS = 0.2;
@@ -63,22 +65,16 @@ module.exports = class zoneDevice extends mainDevice {
     this.log(`${this.getName()} - onSettings - changed: ${changedKeys}`);
     if (newSettings.outdoor_off_above <= newSettings.outdoor_on_below) throw new Error(this.homey.__('error.outdoor_limit'));
     // Settings are saved after this returns.
-    this.setTimer('settings', async () => {
-      if (changedKeys.includes('has_cooling')) {
-        await this.checkCapabilities();
-        await this.setCapabilityValues(true);
-      }
-      await this.evaluate({ urgent: true });
-    }, 1000);
+    this.setTimer('settings', () => this.evaluate({ urgent: true }), 1000);
   }
 
   /**
-   * @description Comfort cool and eco cool are shown only when the zone has cooling. Zones from before the eco
+   * @description Comfort cool and eco cool are shown only when the zone has cooling, that is an A/C member. Zones from before the eco
    * setpoints get them from their old setback (comfort heat minus it, comfort cool plus it).
    */
   async checkCapabilities() {
     const capabilities = [...(this.driver.manifest.capabilities || [])];
-    if (this.getSetting('has_cooling')) capabilities.push(COOL, ECO_COOL);
+    if (this.hasCooling()) capabilities.push(COOL, ECO_COOL);
     // Follow home shows only while it runs.
     if (this.followUntil(Date.now())) capabilities.push(FOLLOW_CAP);
     const setback = this.hasCapability('num_setback') ? this.getCapabilityValue('num_setback') : null;
@@ -102,6 +98,10 @@ module.exports = class zoneDevice extends mainDevice {
     return result;
   }
 
+  hasCooling() {
+    return this.getMembers().some((member) => member.control === 'ac');
+  }
+
   async setCapabilityListeners() {
     this.registerCapabilityListener(HEAT, this.onCapability_TARGET_TEMPERATURE.bind(this));
     this.registerCapabilityListener(ECO, this.onCapability_ECO_HEAT.bind(this));
@@ -109,11 +109,18 @@ module.exports = class zoneDevice extends mainDevice {
     this.registerCapabilityListener('power_boost', this.onCapability_POWER_BOOST.bind(this));
   }
 
+  /**
+   * @description Defaults for capabilities without a value yet, e.g. the cool setpoints when an A/C is added.
+   */
+  async setDefaults(check) {
+    for (const [key, value] of Object.entries(DEFAULTS)) {
+      if (this.hasCapability(key) && this.getCapabilityValue(key) === null) await this.setValue(key, value, check);
+    }
+  }
+
   async setCapabilityValues(check = false) {
     try {
-      for (const [key, value] of Object.entries(DEFAULTS)) {
-        if (this.hasCapability(key) && this.getCapabilityValue(key) === null) await this.setValue(key, value, check);
-      }
+      await this.setDefaults(check);
       await this.updateFollowHours(Date.now());
       await this.subscribeMembers();
       this.updateClimate(Date.now());
@@ -353,6 +360,9 @@ module.exports = class zoneDevice extends mainDevice {
     const ids = members.map((member) => member.id);
     this.memberState = Object.fromEntries(Object.entries(this.memberState).filter(([id]) => ids.includes(id)));
     await this.saveMemberState();
+    // Adding or removing an A/C shows or hides the cool setpoints.
+    await this.checkCapabilities();
+    await this.setDefaults(true);
     await this.subscribeMembers();
     this.updateClimate(Date.now());
     await this.evaluate({ urgent: true });
@@ -538,7 +548,7 @@ module.exports = class zoneDevice extends mainDevice {
         eco: this.getCapabilityValue(ECO),
         cool: this.getCapabilityValue(COOL),
         ecoCool: this.getCapabilityValue(ECO_COOL),
-        hasCooling: this.hasCapability(COOL),
+        hasCooling: this.hasCooling(),
         lowAlarm: this.getSetting('low_temp_alarm'),
         boostDelta: this.getSetting('boost_delta'),
         occupancyRule: this.getSetting('occupancy_rule'),
@@ -598,7 +608,6 @@ module.exports = class zoneDevice extends mainDevice {
    * @description Thermostat and A/C members: mode, setpoint through the pipeline, hold time, hand change and fault restore.
    */
   async applyThermostats(ms) {
-    const holdMs = this.getSetting('hold_minutes') * 60000;
     for (const member of this.getMembers().filter((m) => m.control === 'thermostat' || m.control === 'ac')) {
       try {
         const st = this.state(member);
@@ -633,7 +642,7 @@ module.exports = class zoneDevice extends mainDevice {
         // A fault right after our write is left to the pending verify, never rewritten in a loop.
         if (kind === 'fault' && value === st.written && st.writtenAt && ms - st.writtenAt < VERIFY_MS) continue;
         // Changes are written at once; only a setpoint changed by hand is left alone for the hold time.
-        if (kind === 'hand' && st.writtenAt && ms - st.writtenAt < holdMs) {
+        if (kind === 'hand' && st.writtenAt && ms - st.writtenAt < MANUAL_HOLD_MS) {
           this.issue(member, 'hand_wait', { value });
           continue;
         }

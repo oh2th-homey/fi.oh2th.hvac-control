@@ -6,7 +6,7 @@
     "en": "Set eco cool to [[temperature]] °C"
   },
   "hint": {
-    "en": "Only for zones with Has cooling. Not below comfort cool: comfort follows if needed."
+    "en": "Only for zones with an air conditioner. Not below comfort cool: comfort follows if needed."
   },
   "args": [
     {

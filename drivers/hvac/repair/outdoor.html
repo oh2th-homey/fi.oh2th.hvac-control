@@ -1,0 +1,94 @@
+<!-- The HVAC Controller's only pairing page: the optional outdoor temperature sensor.
+     The same file serves pair and repair (drivers/hvac/repair/outdoor.html, kept identical by a test). -->
+<style>
+  .hz-error { color: var(--homey-color-red-500, #d33); margin: 0.8em 0; }
+</style>
+
+<header class="homey-header">
+  <h1 class="homey-title" data-i18n="pair.outdoor.title"></h1>
+  <p class="homey-subtitle" data-i18n="pair.outdoor.subtitle"></p>
+</header>
+
+<form class="homey-form" onsubmit="return false">
+  <div class="homey-form-group">
+    <label class="homey-form-label" for="out-sensor" data-i18n="pair.outdoor.sensor"></label>
+    <select class="homey-form-select" id="out-sensor"></select>
+  </div>
+  <div class="homey-form-group" id="out-cap-group" style="display: none">
+    <label class="homey-form-label" for="out-cap" data-i18n="pair.members.temperature_cap"></label>
+    <select class="homey-form-select" id="out-cap"></select>
+  </div>
+  <p class="hz-error" id="out-error"></p>
+  <button class="homey-button-primary-full" id="out-save" data-i18n="pair.members.save"></button>
+</form>
+
+<script type="application/javascript">
+  (function () {
+    // Own scope: Homey loads pairing views into one document, so top-level const/let would clash between pages.
+    // Set from the session: repair changes the sensor of the existing controller.
+    let repair = false;
+    const sensorEl = document.getElementById('out-sensor');
+    const capEl = document.getElementById('out-cap');
+    const capGroup = document.getElementById('out-cap-group');
+    const errorEl = document.getElementById('out-error');
+    const saveEl = document.getElementById('out-save');
+    let sensors = [];
+
+    function option(value, text) {
+      const node = document.createElement('option');
+      node.value = value;
+      node.textContent = text;
+      return node;
+    }
+
+    // Several temperatures on one device (e.g. measure_temperature.local): choose which one.
+    function showCaps(selected) {
+      const sensor = sensors.find((s) => s.id === sensorEl.value);
+      capEl.innerHTML = '';
+      const temps = sensor ? sensor.temperatures : [];
+      for (const cap of temps) {
+        const twin = temps.filter((other) => other.title === cap.title).length > 1;
+        capEl.appendChild(option(cap.id, twin ? `${cap.title} (${cap.id})` : cap.title));
+      }
+      if (selected && temps.some((cap) => cap.id === selected)) capEl.value = selected;
+      capGroup.style.display = temps.length > 1 ? '' : 'none';
+    }
+
+    sensorEl.addEventListener('change', () => showCaps(null));
+
+    saveEl.addEventListener('click', async () => {
+      errorEl.textContent = '';
+      const outdoor = sensorEl.value ? { id: sensorEl.value, cap: capEl.value || null } : null;
+      try {
+        if (repair) {
+          await Homey.emit('save_outdoor', { outdoor });
+          Homey.done();
+          return;
+        }
+        const device = await Homey.emit('create_controller', { outdoor });
+        await Homey.createDevice(device);
+        Homey.done();
+      } catch (error) {
+        errorEl.textContent = error.message || String(error);
+      }
+    });
+
+    Homey.showLoadingOverlay();
+    (async () => {
+      try {
+        const result = await Homey.emit('get_outdoor');
+        sensors = result.sensors;
+        repair = result.repair === true;
+        sensorEl.appendChild(option('', Homey.__('pair.outdoor.none')));
+        for (const sensor of sensors) sensorEl.appendChild(option(sensor.id, sensor.zone ? `${sensor.zone} · ${sensor.name}` : sensor.name));
+        sensorEl.value = result.outdoor ? result.outdoor.id : '';
+        showCaps(result.outdoor ? result.outdoor.cap : null);
+      } catch (error) {
+        errorEl.textContent = error.message || String(error);
+        saveEl.disabled = true;
+      } finally {
+        Homey.hideLoadingOverlay();
+      }
+    })();
+  })();
+</script>

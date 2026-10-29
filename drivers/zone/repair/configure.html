@@ -1,5 +1,5 @@
 <!-- Page 2: configure the picked devices and save. Homey's own Previous button goes back to page 1; changes are
-     saved to the session at once. Repair copy of drivers/zone/pair/configure.html with REPAIR = true. -->
+     saved to the session at once. The same file serves pair and repair (drivers/zone/repair/configure.html, kept identical by a test). -->
 <style>
   .hz-sensors { margin: 1em 0; }
   .hz-preview { margin: 0.2em 0; font-weight: bold; }
@@ -22,7 +22,6 @@
 <script type="application/javascript">
   (function () {
     // Own scope: Homey loads pairing views into one document, so top-level const/let would clash between pages.
-    const REPAIR = true;
     const list = document.getElementById('cfg-list');
     const errorEl = document.getElementById('cfg-error');
     const saveEl = document.getElementById('cfg-save');
@@ -179,7 +178,7 @@
       errorEl.textContent = '';
       try {
         const members = collect();
-        if (REPAIR) {
+        if (selection.repair) {
           await Homey.emit('save_members', { members });
           Homey.done();
           return;

@@ -92,17 +92,6 @@
       },
       "children": [
         {
-          "id": "has_cooling",
-          "type": "checkbox",
-          "label": {
-            "en": "Has cooling"
-          },
-          "value": false,
-          "hint": {
-            "en": "The zone has cooling, for example an air conditioner or air-to-air heat pump. Shows the Comfort cool and Eco cool setpoints. Without cooling, the zone's members are off in the cooling season."
-          }
-        },
-        {
           "id": "heat_all_year",
           "type": "checkbox",
           "label": {
@@ -318,23 +307,6 @@
           "value": "Change with Repair",
           "hint": {
             "en": "Devices, roles and per-device options (thermostat step, relay controls and band, inverted relay, air conditioner eco and between-seasons mode) are changed with Repair, not here."
-          }
-        },
-        {
-          "id": "hold_minutes",
-          "type": "number",
-          "label": {
-            "en": "Hand change hold time"
-          },
-          "value": 30,
-          "min": 0,
-          "max": 240,
-          "step": 5,
-          "units": {
-            "en": "min"
-          },
-          "hint": {
-            "en": "A setpoint changed by hand on a device is restored after this long. All other changes are written at once."
           }
         },
         {

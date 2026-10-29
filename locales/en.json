@@ -41,6 +41,12 @@
       "season_off_off": "Off",
       "season_off_hint": "When the season is Off: no heating or cooling.",
       "temperature_cap": "Temperature to use"
+    },
+    "outdoor": {
+      "title": "Outdoor temperature",
+      "subtitle": "Optional. Zones with an outdoor limit use it.",
+      "sensor": "Sensor",
+      "none": "None"
     }
   },
   "error": {
@@ -49,7 +55,7 @@
     "invalid_date": "Enter the date as YYYY-MM-DD",
     "invalid_time": "Enter the time as HH:mm, for example 15:00",
     "date_in_past": "The last day of the long absence is already in the past",
-    "no_cooling": "This zone has no cooling. Turn on Has cooling in the zone settings.",
+    "no_cooling": "This zone has no cooling. Add an air conditioner with Repair.",
     "invalid_currency": "Enter a currency of 1 to 5 characters, for example € or kr.",
     "outdoor_limit": "Stop above must be higher than Heat below."
   },
@@ -61,11 +67,6 @@
   "season": {
     "heating": "Heating",
     "cooling": "Cooling",
-    "off": "Off"
-  },
-  "master_mode": {
-    "auto": "Auto",
-    "long_absence": "Long absence",
     "off": "Off"
   },
   "price": {
@@ -118,7 +119,7 @@
     "clamped_max": "set to max __max__",
     "invalid": "invalid __value__ skipped",
     "fault_wait": "failed, retry __until__",
-    "hand_wait": "set by hand, restoring later",
+    "hand_wait": "manual change, restoring later",
     "hand_restored": "restored __written__ (was __value__)",
     "mode_missing": "no __mode__ mode",
     "no_temperature": "no temperature, off",

@@ -1,0 +1,20 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Long absence"
+  },
+  "hint": {
+    "en": "Everyone is away for days: zones at eco and no cooling."
+  },
+  "getable": true,
+  "setable": true,
+  "uiComponent": "button",
+  "insights": true,
+  "insightsTitleTrue": {
+    "en": "Long absence started"
+  },
+  "insightsTitleFalse": {
+    "en": "Long absence ended"
+  },
+  "icon": "./assets/capabilities/is_long_absence.svg"
+}

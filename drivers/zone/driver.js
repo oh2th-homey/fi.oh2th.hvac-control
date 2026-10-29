@@ -19,11 +19,7 @@ module.exports = class zoneDriver extends mainDriver {
    * @description Pairing: the HVAC Controller must exist; page "select" picks the devices per room, page "configure" sets them up.
    */
   async onPair(session) {
-    const state = { name: null, members: [], candidates: null };
-    session.setHandler('check_controller', async () => {
-      this.homey.app.getController();
-      return true;
-    });
+    const state = { name: null, members: [], candidates: null, repair: false };
     this.setSelectionHandlers(session, state);
     session.setHandler('create_zone', async ({ name, members }) => {
       this.homey.app.getController();
@@ -39,7 +35,7 @@ module.exports = class zoneDriver extends mainDriver {
    * @description Repair: edit the members of a running zone with the same two pages.
    */
   async onRepair(session, device) {
-    const state = { name: null, members: device.getStoreValue('members') || [], candidates: null };
+    const state = { name: null, members: device.getStoreValue('members') || [], candidates: null, repair: true };
     this.setSelectionHandlers(session, state);
     session.setHandler('save_members', async ({ members }) => device.onRepairMembers(await this.prepareMembers(members)));
   }
@@ -49,6 +45,8 @@ module.exports = class zoneDriver extends mainDriver {
    */
   setSelectionHandlers(session, state) {
     session.setHandler('get_selection', async () => {
+      // Pairing needs the HVAC Controller first.
+      if (!state.repair) this.homey.app.getController();
       if (!state.candidates) state.candidates = await this.homey.app.members.candidates();
       return state;
     });

@@ -5,11 +5,11 @@ const assert = require('node:assert');
 
 const zone = require('../lib/zone');
 const pipeline = require('../lib/pipeline');
-const { offSwitch } = require('../lib/members');
+const { offSwitch, isAirConditioner } = require('../lib/members');
 
 const NOW = Date.UTC(2026, 10, 10, 12);
 const ZONE = { mode: 'auto', boostUntil: null, heat: 21, eco: 19, cool: 24, ecoCool: 26, boostDelta: 1, occupancyRule: 'follows', lowAlarm: 5 };
-const SHARED = { occupancy: 'present', season: 'heating', masterMode: 'auto', expensive: false };
+const SHARED = { occupancy: 'present', season: 'heating', longAbsence: false, expensive: false };
 
 function decide(shared = {}, z = {}, extra = {}) {
   return zone.decide({ shared: { ...SHARED, ...shared }, zone: { ...ZONE, ...z }, now: NOW, ...extra });
@@ -36,7 +36,7 @@ test('off: zone off, master off, season off, cooling without cooling', () => {
     [{}, { mode: 'off' }, 'zone_off'],
     [{ season: 'off' }, {}, 'season_off'],
     [{ season: 'cooling' }, { hasCooling: false, cool: null }, 'no_cooling'],
-    [{ masterMode: 'long_absence', season: 'cooling' }, {}, 'long_absence_cooling']
+    [{ longAbsence: true, season: 'cooling' }, {}, 'long_absence_cooling']
   ]) {
     const d = decide(shared, z);
     assert.deepStrictEqual([d.action, d.target, d.reasons.at(-1).code], ['off', null, code]);
@@ -44,7 +44,7 @@ test('off: zone off, master off, season off, cooling without cooling', () => {
 });
 
 test('long absence: eco like away, not price driven', () => {
-  const d = decide({ masterMode: 'long_absence', expensive: true });
+  const d = decide({ longAbsence: true, expensive: true });
   assert.deepStrictEqual([d.action, d.aim, d.target, d.priceDriven, d.reasons.at(-1).code], ['heat', 'eco', 19, false, 'long_absence']);
 });
 
@@ -245,8 +245,8 @@ test('memberPlan: off, thermostat in cooling, A/C modes and fan eco', () => {
   assert.strictEqual(pipeline.memberPlan(decide({ season: 'cooling' }), ac).mode, 'cool');
   assert.strictEqual(pipeline.memberPlan(decide({ occupancy: 'away' }), ac).mode, 'fan');
   assert.strictEqual(pipeline.memberPlan(decide({ occupancy: 'away' }), { ...ac, modes: ['heat', 'cool', 'off'] }).mode, 'heat');
-  assert.strictEqual(pipeline.memberPlan(decide({ masterMode: 'long_absence' }), { ...ac, ecoMode: 'setback' }).mode, 'heat');
-  assert.strictEqual(pipeline.memberPlan(decide({ masterMode: 'long_absence', season: 'cooling' }), ac).mode, 'off');
+  assert.strictEqual(pipeline.memberPlan(decide({ longAbsence: true }), { ...ac, ecoMode: 'setback' }).mode, 'heat');
+  assert.strictEqual(pipeline.memberPlan(decide({ longAbsence: true, season: 'cooling' }), ac).mode, 'off');
   // Season off: fan when chosen, off for other off causes.
   assert.strictEqual(pipeline.memberPlan(decide({ season: 'off' }), { ...ac, seasonOffMode: 'fan' }).mode, 'fan');
   assert.strictEqual(pipeline.memberPlan(decide({ season: 'off' }), ac).mode, 'off');
@@ -263,7 +263,7 @@ test('follow home overrides the occupancy rule until it runs out', () => {
 
 test('long absence: an A/C with eco fan heats at eco and runs fan only while the room is warm', () => {
   const ac = { control: 'ac', ecoMode: 'fan', modes: ['heat', 'cool', 'fan', 'off'], min: 10, max: 30, step: 1 };
-  const absence = decide({ masterMode: 'long_absence' });
+  const absence = decide({ longAbsence: true });
   assert.strictEqual(pipeline.memberPlan(absence, ac, { temperature: 18.5 }).mode, 'heat');
   assert.strictEqual(pipeline.memberPlan(absence, ac, { temperature: null }).mode, 'heat');
   assert.strictEqual(pipeline.memberPlan(absence, ac, { temperature: 20 }).mode, 'fan');
@@ -288,4 +288,12 @@ test('off switch detection: thermostat_mode, then onoff, then system_mode', () =
   assert.strictEqual(offSwitch({ system_mode: { setable: true } }), 'system_mode');
   assert.strictEqual(offSwitch({ system_mode: mode(['heat', 'auto']) }), null);
   assert.strictEqual(offSwitch({ target_temperature: {} }), null);
+});
+
+test('air conditioner detection: class or A/C-only modes, not the standard cool mode', () => {
+  assert.strictEqual(isAirConditioner('thermostat', ['auto', 'heat', 'cool', 'off']), false);
+  assert.strictEqual(isAirConditioner('airconditioning', ['heat', 'cool', 'off']), true);
+  assert.strictEqual(isAirConditioner('heatpump', ['heat', 'cool', 'off']), true);
+  assert.strictEqual(isAirConditioner('thermostat', ['heat', 'cool', 'fan', 'off']), true);
+  assert.strictEqual(isAirConditioner('airconditioning', []), false);
 });

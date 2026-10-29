@@ -1,0 +1,15 @@
+{
+  "title": {
+    "en": "Long absence is on"
+  },
+  "titleFormatted": {
+    "en": "Long absence !{{is|is not}} on"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=hvac"
+    }
+  ]
+}

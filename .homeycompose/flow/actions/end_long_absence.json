@@ -1,0 +1,15 @@
+{
+  "title": {
+    "en": "End long absence"
+  },
+  "hint": {
+    "en": "Zones return to following occupancy and prices."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=hvac"
+    }
+  ]
+}

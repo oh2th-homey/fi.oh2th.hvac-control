@@ -9,12 +9,29 @@ const SEASONS = ['heating', 'cooling', 'off'];
 // Season is shown with the standard thermostat_mode capability.
 const SEASON_MODE = { heating: 'heat', cooling: 'cool', off: 'off' };
 const MODE_SEASON = { heat: 'heating', cool: 'cooling', off: 'off' };
-const MASTER_MODES = ['auto', 'long_absence'];
 
-// An outdoor temperature not updated for this long counts as unknown.
+// An outdoor sensor not updated for this long counts as unknown.
 const OUTDOOR_MAX_AGE_MS = 3 * 60 * 60 * 1000;
 
 module.exports = class hvacDevice extends mainDevice {
+  async onInitDevice() {
+    // The outdoor temperature came from a flow card before 1.0.1.
+    if (this.getStoreValue('outdoorAt') !== null) await this.unsetStoreValue('outdoorAt').catch(this.error);
+    // Mode (Auto / Long absence) became the Long absence button in 1.0.1; checkCapabilities removes the old one.
+    if (this.hasCapability('enum_master_mode')) await this.setStoreValue('longAbsence', this.getCapabilityValue('enum_master_mode') === 'long_absence');
+    await this.subscribeOutdoor();
+  }
+
+  async onDeleted() {
+    await super.onDeleted();
+    this.unsubscribeOutdoor();
+  }
+
+  async onUninit() {
+    await super.onUninit();
+    this.unsubscribeOutdoor();
+  }
+
   async onSettings({ oldSettings, newSettings, changedKeys }) {
     this.log(`${this.getName()} - onSettings - changed: ${changedKeys}`);
     if (!isTime(newSettings.tomorrow_check_time)) throw new Error(this.homey.__('error.invalid_time'));
@@ -25,8 +42,8 @@ module.exports = class hvacDevice extends mainDevice {
     if (newSettings.absence_until !== '' && !isDate(newSettings.absence_until)) throw new Error(this.homey.__('error.invalid_date'));
 
     if (changedKeys.includes('absence_until')) {
-      if (newSettings.absence_until !== '') await this.changeEnum('master_mode', 'long_absence');
-      else if (this.getCapabilityValue('enum_master_mode') === 'long_absence') await this.changeEnum('master_mode', 'auto');
+      if (newSettings.absence_until !== '') await this.changeLongAbsence(true);
+      else await this.changeLongAbsence(false);
     }
     // Settings are saved after this returns; evaluate with the new ones.
     await this.evaluatePrices(newSettings);
@@ -42,7 +59,7 @@ module.exports = class hvacDevice extends mainDevice {
   async setCapabilityListeners() {
     this.registerCapabilityListener('enum_occupancy', this.onCapability_OCCUPANCY.bind(this));
     this.registerCapabilityListener('thermostat_mode', this.onCapability_THERMOSTAT_MODE.bind(this));
-    this.registerCapabilityListener('enum_master_mode', this.onCapability_MASTER_MODE.bind(this));
+    this.registerCapabilityListener('is_long_absence', this.onCapability_LONG_ABSENCE.bind(this));
   }
 
   /**
@@ -60,7 +77,10 @@ module.exports = class hvacDevice extends mainDevice {
       if (check) await this.applyCurrency();
       if (!OCCUPANCY.includes(this.getCapabilityValue('enum_occupancy'))) await this.setValue('enum_occupancy', 'present', check);
       if (!MODE_SEASON[this.getCapabilityValue('thermostat_mode')]) await this.setValue('thermostat_mode', 'heat', check);
-      if (!MASTER_MODES.includes(this.getCapabilityValue('enum_master_mode'))) await this.setValue('enum_master_mode', 'auto', check);
+      if (typeof this.getCapabilityValue('is_long_absence') !== 'boolean') {
+        const migrated = this.getStoreValue('longAbsence');
+        await this.setValue('is_long_absence', migrated === true || this.getSetting('absence_until') !== '', check);
+      }
       await this.evaluatePrices(this.getSettings(), check);
     } catch (error) {
       this.setUnavailable(error).catch(this.error);
@@ -70,6 +90,7 @@ module.exports = class hvacDevice extends mainDevice {
 
   async onInterval(now) {
     const local = localTime(this, now);
+    if (!this.outdoorListener && local.minutes % 5 === 0) await this.subscribeOutdoor();
     await this.checkAbsence(local);
     if (local.minutes % 15 === 0) await this.evaluatePrices();
     if (local.minutesOfDay === strToMins(this.getSettings().tomorrow_check_time)) await this.checkTomorrow(now.getTime());
@@ -82,7 +103,7 @@ module.exports = class hvacDevice extends mainDevice {
     return {
       occupancy: this.getCapabilityValue('enum_occupancy'),
       season: this.getSeason(),
-      masterMode: this.getCapabilityValue('enum_master_mode'),
+      longAbsence: this.getCapabilityValue('is_long_absence') === true,
       expensive: this.getCapabilityValue('is_expensive') === true,
       price: this.getCapabilityValue('measure_monetary'),
       outdoor: this.outdoorTemperature(),
@@ -114,25 +135,36 @@ module.exports = class hvacDevice extends mainDevice {
     }
   }
 
-  async onCapability_MASTER_MODE(value) {
-    this.log(`${this.getName()} - onCapability_MASTER_MODE - ${value}`);
+  async onCapability_LONG_ABSENCE(value) {
+    this.log(`${this.getName()} - onCapability_LONG_ABSENCE - ${value}`);
     try {
-      // Leaving long absence by hand also ends a dated one.
-      if (value !== 'long_absence' && this.getSetting('absence_until') !== '') await this.setSettings({ absence_until: '' });
-      return Promise.resolve(await this.changeEnum('master_mode', value));
+      // Ending long absence by hand also ends a dated one.
+      if (value !== true && this.getSetting('absence_until') !== '') await this.setSettings({ absence_until: '' });
+      return Promise.resolve(await this.changeLongAbsence(value === true));
     } catch (error) {
       return Promise.reject(error);
     }
   }
 
   /**
-   * @description Set occupancy, season or master mode, fire its changed trigger and let the zones re-evaluate.
+   * @description Start or end long absence; setValue fires "Long absence changed", the zones re-evaluate.
+   * @returns {Promise<boolean>} true when changed
+   */
+  async changeLongAbsence(value) {
+    if (value === (this.getCapabilityValue('is_long_absence') === true)) return false;
+    await this.setValue('is_long_absence', value);
+    await this.homey.app.onSharedStateChanged();
+    return true;
+  }
+
+  /**
+   * @description Set occupancy or season, fire its changed trigger and let the zones re-evaluate.
    * @returns {Promise<boolean>} true when changed
    */
   async changeEnum(key, value) {
-    const values = { occupancy: OCCUPANCY, season: SEASONS, master_mode: MASTER_MODES }[key];
+    const values = { occupancy: OCCUPANCY, season: SEASONS }[key];
     if (!values.includes(value)) throw new Error(this.homey.__('error.invalid_value', { value }));
-    const capability = { occupancy: 'enum_occupancy', season: 'thermostat_mode', master_mode: 'enum_master_mode' }[key];
+    const capability = { occupancy: 'enum_occupancy', season: 'thermostat_mode' }[key];
     const capabilityValue = key === 'season' ? SEASON_MODE[value] : value;
     if (capabilityValue === this.getCapabilityValue(capability)) return false;
     await this.setValue(capability, capabilityValue);
@@ -150,31 +182,64 @@ module.exports = class hvacDevice extends mainDevice {
   }
 
   /**
-   * @description Outdoor temperature from the flow card, or null when unknown or older than OUTDOOR_MAX_AGE_MS.
+   * Outdoor temperature: follows the sensor chosen at pairing or repair.
    */
-  outdoorTemperature() {
-    const value = this.getCapabilityValue('measure_temperature.outdoor');
-    const at = this.getStoreValue('outdoorAt');
-    if (typeof value !== 'number' || !at || Date.now() - at > OUTDOOR_MAX_AGE_MS) return null;
-    return value;
+  async subscribeOutdoor() {
+    const outdoor = this.getStoreValue('outdoor');
+    if (!outdoor || this.outdoorListener) return;
+    const listener = (value) => this.onOutdoor(value).catch(this.error);
+    try {
+      await this.homey.app.members.subscribe(outdoor.id, outdoor.cap, listener);
+      this.outdoorListener = listener;
+      const reading = this.homey.app.members.read(outdoor.id, outdoor.cap);
+      await this.onOutdoor(reading ? reading.value : null);
+    } catch (error) {
+      // Retried from onInterval, e.g. when the sensor's app starts later.
+      this.error(`${this.getName()} - subscribeOutdoor - ${error}`);
+    }
+  }
+
+  unsubscribeOutdoor() {
+    const outdoor = this.getStoreValue('outdoor');
+    if (outdoor && this.outdoorListener) this.homey.app.members.unsubscribe(outdoor.id, outdoor.cap, this.outdoorListener);
+    this.outdoorListener = null;
+  }
+
+  async onOutdoor(value) {
+    const valid = typeof value === 'number' && Number.isFinite(value) && value >= -60 && value <= 60;
+    const changed = await this.setValue('measure_temperature.outdoor', valid ? Math.round(value * 10) / 10 : null);
+    if (changed && !this.initializing) await this.homey.app.onSharedStateChanged();
   }
 
   /**
-   * @description Set the outdoor temperature (flow action, from any sensor).
+   * @description Repair: a new outdoor sensor, or null for none.
    */
-  async onAction_SET_MEASURE_TEMPERATURE_OUTDOOR(value) {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value < -60 || value > 60) throw new Error(this.homey.__('error.invalid_value', { value }));
-    const changed = await this.setValue('measure_temperature.outdoor', Math.round(value * 10) / 10);
-    await this.setStoreValue('outdoorAt', Date.now());
-    if (changed) await this.homey.app.onSharedStateChanged();
+  async onRepairOutdoor(outdoor) {
+    this.log(`${this.getName()} - onRepairOutdoor - ${outdoor ? `${outdoor.name} ${outdoor.cap}` : 'none'}`);
+    this.unsubscribeOutdoor();
+    await this.setStoreValue('outdoor', outdoor);
+    await this.setValue('measure_temperature.outdoor', null);
+    await this.subscribeOutdoor();
+    await this.homey.app.onSharedStateChanged();
     return true;
   }
 
   /**
-   * @description Set master mode (flow action).
+   * @description Outdoor temperature from the sensor, or null when none, unavailable or not updated for OUTDOOR_MAX_AGE_MS.
    */
-  async onAction_SET_ENUM_MASTER_MODE(value) {
-    return this.onCapability_MASTER_MODE(value);
+  outdoorTemperature() {
+    const outdoor = this.getStoreValue('outdoor');
+    const reading = outdoor && this.outdoorListener ? this.homey.app.members.read(outdoor.id, outdoor.cap) : null;
+    if (!reading || !reading.available || typeof reading.value !== 'number' || !Number.isFinite(reading.value)) return null;
+    if (reading.lastUpdated && Date.now() - reading.lastUpdated.getTime() > OUTDOOR_MAX_AGE_MS) return null;
+    return Math.round(reading.value * 10) / 10;
+  }
+
+  /**
+   * @description End long absence now (flow action).
+   */
+  async onAction_END_LONG_ABSENCE() {
+    return this.onCapability_LONG_ABSENCE(false);
   }
 
   /**
@@ -187,19 +252,7 @@ module.exports = class hvacDevice extends mainDevice {
     if (!isDate(date)) throw new Error(this.homey.__('error.invalid_date'));
     if (date < localTime(this).date) throw new Error(this.homey.__('error.date_in_past'));
     await this.setSettings({ absence_until: date });
-    await this.changeEnum('master_mode', 'long_absence');
-  }
-
-  /**
-   * @description Set the price model, and the above average percentage when given (flow action).
-   */
-  async onAction_SET_PRICE_MODEL(model, pct) {
-    this.log(`${this.getName()} - onAction_SET_PRICE_MODEL - ${model} ${pct}`);
-    if (!prices.MODELS.includes(model)) throw new Error(this.homey.__('error.invalid_value', { value: model }));
-    const changes = { price_model: model };
-    if (typeof pct === 'number' && Number.isFinite(pct)) changes.price_above_average_pct = Math.min(500, Math.max(0, pct));
-    await this.setSettings(changes);
-    await this.evaluatePrices();
+    await this.changeLongAbsence(true);
   }
 
   /**
@@ -305,7 +358,7 @@ module.exports = class hvacDevice extends mainDevice {
     if (until && local.date > until) {
       this.log(`${this.getName()} - checkAbsence - long absence until ${until} ended`);
       await this.setSettings({ absence_until: '' });
-      if (this.getCapabilityValue('enum_master_mode') === 'long_absence') await this.changeEnum('master_mode', 'auto');
+      await this.changeLongAbsence(false);
     }
   }
 
