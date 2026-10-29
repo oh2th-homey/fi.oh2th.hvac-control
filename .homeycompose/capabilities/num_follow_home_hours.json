@@ -1,0 +1,19 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Follow home"
+  },
+  "hint": {
+    "en": "Hours left that the zone follows who is home instead of its Occupancy setting. 0: off."
+  },
+  "units": {
+    "en": "h"
+  },
+  "decimals": 0,
+  "min": 0,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": false,
+  "icon": "./assets/capabilities/enum_occupancy.svg"
+}

@@ -1,0 +1,15 @@
+{
+  "title": {
+    "en": "Use own occupancy setting"
+  },
+  "hint": {
+    "en": "Ends Follow home now."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=zone"
+    }
+  ]
+}

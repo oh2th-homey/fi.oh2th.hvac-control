@@ -55,6 +55,8 @@ them later with **Repair** in the zone's device settings, which shows the same t
 - Low temperature alarm: the zone problem alarm turns on below a set temperature (zone setting)
 - Occupancy rule: Follows home, Always eco (e.g. a guest room) or Always comfort (ignores who is
   home); can be changed from a flow with **Set occupancy rule**
+- Follow home: hours left that the zone follows who is home instead of its occupancy rule
+  (see Guests in the guest room)
 - Heat all year: keeps heating in the cooling and off seasons (e.g. a bathroom floor)
 - Prices: use them in heating and cooling, only one season, or never; when expensive go to eco or
   switch the zone off
@@ -144,7 +146,8 @@ Heating Zone:
 
 - Actions: **Set zone mode** (Auto, Manual, Off), **Boost zone** for a number of minutes,
   **Set eco heat**, **Set comfort cool** and **Set eco cool** (zones with cooling), **Set
-  occupancy rule**. Comfort heat has Homey's own set card
+  occupancy rule**, **Follow home for 24 hours** and **Use own occupancy setting**. Comfort heat
+  has Homey's own set card
 - Conditions: zone mode is, zone is in eco
 - Triggers: eco changed, target changed (with the reason), member write failed
 
@@ -171,6 +174,14 @@ Feed occupancy from any presence source you already have:
 Every zone re-evaluates at once. Present and Coming Home aim at comfort, Away at eco (the eco
 heat setpoint). A guest room that should stay at eco until you boost it: set the zone's
 **Occupancy** setting to Always eco.
+
+### Guests in the guest room
+
+Keep the guest room on **Always eco**. When guests come, run **Follow home for 24 hours** on
+that zone: it then follows who is home like the other rooms. Each run adds 24 hours, so a
+button or a flow can extend the stay one day at a time. The zone shows the hours left as
+**Follow home**, and its reason says until when. When the time runs out, or after **Use own
+occupancy setting**, the zone returns to its Occupancy setting.
 
 ### Save on expensive price peaks
 

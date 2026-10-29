@@ -109,7 +109,8 @@
     "outdoor_warm": "Outdoor __outdoor__: no heating needed (heats below __limit__)",
     "always_comfort": "Always comfort",
     "expensive_off": "Price expensive: off",
-    "eco_equals_comfort": "eco equals comfort"
+    "eco_equals_comfort": "eco equals comfort",
+    "follow_home": "follows home until __until__"
   },
   "member": {
     "heating_device_cooling": "heating device, off while cooling",

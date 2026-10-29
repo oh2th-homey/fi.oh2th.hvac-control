@@ -248,3 +248,11 @@ test('memberPlan: off, thermostat in cooling, A/C modes and fan eco', () => {
   assert.strictEqual(pipeline.memberPlan(decide({ season: 'off' }), ac).mode, 'off');
   assert.strictEqual(pipeline.memberPlan(decide({}, { mode: 'off' }), { ...ac, seasonOffMode: 'fan' }).mode, 'off');
 });
+
+test('follow home overrides the occupancy rule until it runs out', () => {
+  const guest = { occupancyRule: 'always_eco', followUntil: NOW + 3600000 };
+  const following = decide({}, guest);
+  assert.deepStrictEqual([following.aim, following.reasons[0].code], ['comfort', 'follow_home']);
+  assert.strictEqual(decide({ occupancy: 'away' }, guest).aim, 'eco');
+  assert.strictEqual(decide({}, { ...guest, followUntil: NOW - 1 }).aim, 'eco');
+});

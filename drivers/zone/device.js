@@ -13,6 +13,7 @@ const COOL = 'target_temperature.cool';
 const ECO_COOL = 'target_temperature.eco_cool';
 const COOL_OPTIONS = { title: { en: 'Comfort cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
 const ECO_COOL_OPTIONS = { title: { en: 'Eco cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
+const FOLLOW_STEP_MS = 24 * 60 * 60 * 1000;
 const DEFAULTS = { [HEAT]: 21, [ECO]: 19, [COOL]: 24, [ECO_COOL]: 26, enum_zone_mode: 'auto', power_boost: false };
 // Comfort and eco stay in order: eco heat never above comfort heat, eco cool never below comfort cool.
 // Changing one moves its partner along when they would cross.
@@ -107,6 +108,7 @@ module.exports = class zoneDevice extends mainDevice {
       for (const [key, value] of Object.entries(DEFAULTS)) {
         if (this.hasCapability(key) && this.getCapabilityValue(key) === null) await this.setValue(key, value, check);
       }
+      await this.updateFollowHours(Date.now());
       await this.subscribeMembers();
       this.updateClimate(Date.now());
       await this.evaluate({ urgent: true, firstRun: check });
@@ -126,7 +128,10 @@ module.exports = class zoneDevice extends mainDevice {
       return;
     }
     this.updateClimate(ms);
-    if (localTime(this, now).minutes % 15 === 0) {
+    if (await this.updateFollowHours(ms)) {
+      this.log(`${this.getName()} - onInterval - Follow home ended`);
+      await this.evaluate({ urgent: true });
+    } else if (localTime(this, now).minutes % 15 === 0) {
       await this.evaluate();
     } else if (this.windowOpen(ms) !== this.windowWasOpen) {
       // A door or window passed its delay, or closed: act now, not at the next quarter.
@@ -267,6 +272,52 @@ module.exports = class zoneDevice extends mainDevice {
     await this.setSettings({ occupancy_rule: rule });
     await this.evaluate({ urgent: true });
     return true;
+  }
+
+  /**
+   * @description Follow home for 24 hours more (from now, or from the current end when already following).
+   */
+  async onAction_ADD_NUM_FOLLOW_HOME_HOURS() {
+    const now = Date.now();
+    const until = Math.max(now, this.followUntil(now) || 0) + FOLLOW_STEP_MS;
+    this.log(`${this.getName()} - onAction_ADD_NUM_FOLLOW_HOME_HOURS - until ${new Date(until).toISOString()}`);
+    await this.setStoreValue('followUntil', until);
+    await this.updateFollowHours(now);
+    await this.evaluate({ urgent: true });
+    return true;
+  }
+
+  /**
+   * @description End Follow home: back to the zone's own Occupancy setting.
+   */
+  async onAction_RESET_NUM_FOLLOW_HOME_HOURS() {
+    this.log(`${this.getName()} - onAction_RESET_NUM_FOLLOW_HOME_HOURS`);
+    if (!this.getStoreValue('followUntil')) return false;
+    await this.unsetStoreValue('followUntil');
+    await this.updateFollowHours(Date.now());
+    await this.evaluate({ urgent: true });
+    return true;
+  }
+
+  /**
+   * @description End of Follow home (ms), or null when off or run out.
+   */
+  followUntil(ms) {
+    const until = this.getStoreValue('followUntil');
+    return typeof until === 'number' && ms < until ? until : null;
+  }
+
+  /**
+   * @description Hours left, rounded up; clears Follow home when it has run out.
+   * @returns {boolean} true when Follow home just ran out
+   */
+  async updateFollowHours(ms) {
+    const stored = this.getStoreValue('followUntil');
+    const until = this.followUntil(ms);
+    const ended = typeof stored === 'number' && until === null;
+    if (ended) await this.unsetStoreValue('followUntil');
+    await this.setValue('num_follow_home_hours', until ? Math.ceil((until - ms) / 3600000) : 0);
+    return ended;
   }
 
   /**
@@ -459,6 +510,7 @@ module.exports = class zoneDevice extends mainDevice {
         lowAlarm: this.getSetting('low_temp_alarm'),
         boostDelta: this.getSetting('boost_delta'),
         occupancyRule: this.getSetting('occupancy_rule'),
+        followUntil: this.followUntil(ms),
         windowOpen,
         heatAllYear: this.getSetting('heat_all_year') === true,
         priceUse: this.getSetting('price_use'),
@@ -493,7 +545,11 @@ module.exports = class zoneDevice extends mainDevice {
     const imperial = this.homey.app.isImperial();
     const format = (args) => Object.fromEntries(
       Object.entries(args).map(([key, value]) => {
-        if (key === 'until') return [key, localTime(this, new Date(value)).time];
+        if (key === 'until') {
+          // Today: the time only; another day: the date too.
+          const at = localTime(this, new Date(value));
+          return [key, at.date === localTime(this).date ? at.time : `${at.day}.${at.month}. ${at.time}`];
+        }
         if (typeof value !== 'number') return [key, value];
         return [key, DIFFERENCE_ARGS.includes(key) ? formatDifference(value, imperial) : formatTemperature(value, imperial)];
       })

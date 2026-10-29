@@ -414,6 +414,22 @@
     "actions": [
       {
         "title": {
+          "en": "Follow home for 24 hours"
+        },
+        "hint": {
+          "en": "E.g. guests in a guest room. Running it again adds 24 hours. Afterwards the zone returns to its Occupancy setting."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=zone"
+          }
+        ],
+        "id": "add_num_follow_home_hours"
+      },
+      {
+        "title": {
           "en": "Import prices"
         },
         "titleFormatted": {
@@ -461,6 +477,22 @@
           }
         ],
         "id": "import_prices"
+      },
+      {
+        "title": {
+          "en": "Use own occupancy setting"
+        },
+        "hint": {
+          "en": "Ends Follow home now."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=zone"
+          }
+        ],
+        "id": "reset_num_follow_home_hours"
       },
       {
         "title": {
@@ -1134,6 +1166,7 @@
         "measure_humidity",
         "enum_zone_mode",
         "power_boost",
+        "num_follow_home_hours",
         "is_eco",
         "text_reason",
         "alarm_problem"
@@ -1684,6 +1717,25 @@
         "en": "Price became normal"
       },
       "icon": "./assets/capabilities/is_expensive.svg"
+    },
+    "num_follow_home_hours": {
+      "type": "number",
+      "title": {
+        "en": "Follow home"
+      },
+      "hint": {
+        "en": "Hours left that the zone follows who is home instead of its Occupancy setting. 0: off."
+      },
+      "units": {
+        "en": "h"
+      },
+      "decimals": 0,
+      "min": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "./assets/capabilities/enum_occupancy.svg"
     },
     "text_prices_until": {
       "type": "string",
