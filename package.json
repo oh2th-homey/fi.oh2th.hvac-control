@@ -17,5 +17,10 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "9.0.7"
+    }
   }
 }
