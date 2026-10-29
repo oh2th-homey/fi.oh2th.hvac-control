@@ -11,10 +11,11 @@
     "en": "Smart HVAC Control"
   },
   "description": {
-    "en": "Comfort when you need it, heat when it's cheap, no schedules"
+    "en": "Comfort when you're home, savings at price peaks"
   },
   "category": [
-    "tools"
+    "climate",
+    "energy"
   ],
   "permissions": [
     "homey:manager:api"
@@ -59,6 +60,7 @@
   "bugs": {
     "url": "https://github.com/oh2th-homey/fi.oh2th.hvac-control/issues"
   },
+  "homeyCommunityTopicId": 161500,
   "support": "https://github.com/oh2th-homey/fi.oh2th.hvac-control/discussions/categories/general",
   "homepage": "https://oh2th.fi/tapio/homey/"
 }
