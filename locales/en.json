@@ -40,7 +40,9 @@
       "season_off": "Between seasons",
       "season_off_off": "Off",
       "season_off_hint": "When the season is Off: no heating or cooling.",
-      "temperature_cap": "Temperature to use"
+      "temperature_cap": "Temperature to use",
+      "power": "Power meter",
+      "power_picked": "Power meters"
     },
     "outdoor": {
       "title": "Outdoor temperature",

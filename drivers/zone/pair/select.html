@@ -86,6 +86,7 @@
         if (kind) roles.appendChild(checkbox(kind, device, picked.control === kind));
         if (device.temperature || device.humidity) roles.appendChild(checkbox('sensor', device, !!picked.sensor));
         if (device.contact) roles.appendChild(checkbox('contact', device, !!picked.contact));
+        if (device.power) roles.appendChild(checkbox('power', device, !!picked.power));
         fieldset.appendChild(el('div', { class: 'hz-device' }, [el('span', { class: 'hz-device-name', text: device.name }), roles]));
       }
     }
@@ -94,9 +95,10 @@
       const picked = {};
       for (const box of roomsEl.querySelectorAll('input[type="checkbox"]')) {
         if (!box.checked) continue;
-        const member = picked[box.dataset.id] || { id: box.dataset.id, control: null, sensor: false, contact: false };
+        const member = picked[box.dataset.id] || { id: box.dataset.id, control: null, sensor: false, contact: false, power: false };
         if (box.dataset.role === 'sensor') member.sensor = true;
         else if (box.dataset.role === 'contact') member.contact = true;
+        else if (box.dataset.role === 'power') member.power = true;
         else member.control = box.dataset.role;
         picked[box.dataset.id] = member;
       }

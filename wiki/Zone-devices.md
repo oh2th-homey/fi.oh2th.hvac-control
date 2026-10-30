@@ -14,6 +14,9 @@ A zone can have:
   available. If a device has several temperatures, for example a thermostat with
   `measure_temperature.local`, choose which one on the configure page.
 - **Windows and doors**: contact sensors.
+- **Power meters**: devices that measure the power of the zone's heating, such as a heater or plug
+  that measures itself, or a separate meter in the heater's supply. The zone only reads them and
+  shows their sum as **Heating power**.
 
 Only heating, cooling and room devices are listed (thermostats, heaters, radiators, air
 conditioners, heat pumps, relays, plugs, sensors, fans and air purifiers, and devices of the class

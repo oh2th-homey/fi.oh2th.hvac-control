@@ -15,6 +15,7 @@
 <form class="homey-form" onsubmit="return false">
   <div id="cfg-list"></div>
   <p class="hz-sensors" id="cfg-sensors"></p>
+  <p class="hz-sensors" id="cfg-power"></p>
   <p class="hz-error" id="cfg-error"></p>
   <button class="homey-button-primary-full" id="cfg-save" data-i18n="pair.members.save"></button>
 </form>
@@ -140,6 +141,8 @@
       }
       const sensors = selection.members.filter((m) => m.sensor && devices[m.id]).map((m) => devices[m.id].name);
       document.getElementById('cfg-sensors').textContent = sensors.length ? `${t('sensors_picked')}: ${sensors.join(', ')}` : '';
+      const meters = selection.members.filter((m) => m.power && devices[m.id]).map((m) => devices[m.id].name);
+      document.getElementById('cfg-power').textContent = meters.length ? `${t('power_picked')}: ${meters.join(', ')}` : '';
     }
 
     function collect() {

@@ -13,6 +13,9 @@ The controller holds what all zones share. You can add only one.
 - **Prices until**: the last imported price.
 - **Outdoor temperature**, from the sensor you picked. Zones with an outdoor limit use it. To pick
   another sensor, use **Repair** in the controller's device settings.
+- **Heating power**, only when a zone has power meters: the sum of the zones' heating power.
+  In Homey Energy, count either the controller, the zones or the meters, not more than one (see
+  [Setup](Setup)).
 - **Reason**: why the price is expensive or not, for example `Normal`.
 
 <img src="images/controller-device.png" alt="HVAC Controller during a price peak" width="300">

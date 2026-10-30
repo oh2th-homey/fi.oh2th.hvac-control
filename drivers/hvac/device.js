@@ -1,6 +1,6 @@
 'use strict';
 
-const { localTime, strToMins, localDate, addDays, isDate, isTime } = require('oh2th-homey-helpers');
+const { localTime, strToMins, localDate, addDays, isDate, isTime, updateCapabilities } = require('oh2th-homey-helpers');
 const mainDevice = require('../main-device');
 const prices = require('../../lib/prices');
 
@@ -12,6 +12,10 @@ const MODE_SEASON = { heat: 'heating', cool: 'cooling', off: 'off' };
 
 // An outdoor sensor not updated for this long counts as unknown.
 const OUTDOOR_MAX_AGE_MS = 3 * 60 * 60 * 1000;
+// The zones' heating power summed, as the controller's own power; it can be excluded in Homey Energy.
+const POWER = 'measure_power';
+const ZONE_POWER = 'measure_power.heating';
+const POWER_OPTIONS = { title: { en: 'Heating power' }, units: { en: 'W' }, decimals: 0 };
 
 module.exports = class hvacDevice extends mainDevice {
   async onInitDevice() {
@@ -49,6 +53,46 @@ module.exports = class hvacDevice extends mainDevice {
    */
   async onReady() {
     await this.homey.app.onSharedStateChanged();
+  }
+
+  /**
+   * @description Heating power is shown only when a zone has a power meter.
+   * @param {Object} [deleted] - Zone being deleted, left out
+   */
+  async checkCapabilities(deleted = null) {
+    const capabilities = [...(this.driver.manifest.capabilities || [])];
+    const zones = this.meteredZones(deleted);
+    // Zones not loaded yet (app start): keep what is shown.
+    if (zones === null ? this.hasCapability(POWER) : zones.length) capabilities.push(POWER);
+    const result = await updateCapabilities(this, capabilities, this.getCapabilities());
+    if (result.added.includes(POWER)) await this.setCapabilityOptions(POWER, POWER_OPTIONS).catch(this.error);
+    return result;
+  }
+
+  /**
+   * @description Zones with a power meter, or null while the zone driver is not ready.
+   */
+  meteredZones(deleted = null) {
+    try {
+      return this.homey.drivers
+        .getDriver('zone')
+        .getDevices()
+        .filter((zone) => zone !== deleted && typeof zone.hasPower === 'function' && zone.hasPower());
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * @description Heating power: sum of the zones' heating power. Zones call this when theirs changes, when their meters
+   * change and when deleted.
+   * @param {Object} [deleted] - Zone being deleted, left out
+   */
+  async updateHeatingPower(deleted = null) {
+    const zones = this.meteredZones(deleted) || [];
+    if (zones.length > 0 !== this.hasCapability(POWER)) await this.checkCapabilities(deleted);
+    const watts = zones.map((zone) => zone.getCapabilityValue(ZONE_POWER)).filter((value) => typeof value === 'number');
+    await this.setValue(POWER, watts.length ? Math.round(watts.reduce((sum, value) => sum + value, 0)) : null);
   }
 
   async setCapabilityListeners() {

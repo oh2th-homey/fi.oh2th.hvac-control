@@ -22,6 +22,8 @@ The zone shows:
 - **Follow home**: hours left, shown only while a temporary Follow home runs (see
   [Guests in the guest room](How-to#guests-in-the-guest-room)).
 - The zone temperature and humidity, and a **Reason** that explains what the zone does.
+- **Heating power**, only when the zone has power meters: the sum of their readings. In Homey
+  Energy and Climate, count either the zone or its own devices, not both (see [Setup](Setup)).
 
 <img src="images/zone-device.png" alt="A zone in eco during a price peak" width="300">
 

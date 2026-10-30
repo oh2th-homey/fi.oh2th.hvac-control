@@ -16,6 +16,8 @@ const TARGET = 'target_temperature';
 const TEMPERATURE = 'measure_temperature';
 const COOL_OPTIONS = { title: { en: 'Comfort cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
 const ECO_COOL_OPTIONS = { title: { en: 'Eco cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
+const POWER = 'measure_power.heating';
+const POWER_OPTIONS = { title: { en: 'Heating power' }, units: { en: 'W' }, decimals: 0 };
 const FOLLOW_STEP_MS = 24 * 60 * 60 * 1000;
 // Boost from a flow token is capped like the card's own limit.
 const MAX_BOOST_MINUTES = 1440;
@@ -58,6 +60,7 @@ module.exports = class zoneDevice extends mainDevice {
   async onDeleted() {
     await super.onDeleted();
     this.unsubscribeMembers();
+    this.notifyPower(true);
   }
 
   async onUninit() {
@@ -73,16 +76,19 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   /**
-   * @description Comfort cool and eco cool are shown only when the zone has cooling, that is an A/C member.
+   * @description Comfort cool and eco cool are shown only when the zone has cooling, that is an A/C member; heating power
+   * only when it has a power meter.
    */
   async checkCapabilities() {
     const capabilities = [...(this.driver.manifest.capabilities || [])];
     if (this.hasCooling()) capabilities.push(COOL, ECO_COOL);
+    if (this.hasPower()) capabilities.push(POWER);
     // Follow home shows only while it runs.
     if (this.followUntil(Date.now())) capabilities.push(FOLLOW_CAP);
     const result = await updateCapabilities(this, capabilities, this.getCapabilities());
     if (result.added.includes(COOL)) await this.setCapabilityOptions(COOL, COOL_OPTIONS).catch(this.error);
     if (result.added.includes(ECO_COOL)) await this.setCapabilityOptions(ECO_COOL, ECO_COOL_OPTIONS).catch(this.error);
+    if (result.added.includes(POWER)) await this.setCapabilityOptions(POWER, POWER_OPTIONS).catch(this.error);
     for (const key of [COOL, ECO_COOL]) {
       if (this.hasCapability(key) && !this.setpointListeners[key]) {
         this.registerCapabilityListener(key, (value) => this.changeSetpoint(key, value));
@@ -94,6 +100,10 @@ module.exports = class zoneDevice extends mainDevice {
 
   hasCooling() {
     return this.getMembers().some((member) => member.control === 'ac');
+  }
+
+  hasPower() {
+    return this.getMembers().some((member) => member.power);
   }
 
   async setCapabilityListeners() {
@@ -346,10 +356,12 @@ module.exports = class zoneDevice extends mainDevice {
     const ids = members.map((member) => member.id);
     this.memberState = Object.fromEntries(Object.entries(this.memberState).filter(([id]) => ids.includes(id)));
     await this.saveMemberState();
-    // Adding or removing an A/C shows or hides the cool setpoints.
+    // Adding or removing an A/C or a power meter shows or hides the cool setpoints or heating power.
     await this.checkCapabilities();
     await this.setDefaults(true);
     await this.subscribeMembers();
+    // Other sensors and meters: set every value again, also on capabilities added just now.
+    this.climate = {};
     this.updateClimate(Date.now());
     await this.evaluate({ urgent: true });
     return true;
@@ -365,6 +377,7 @@ module.exports = class zoneDevice extends mainDevice {
       if (member.sensor && member.temperature) caps.push(member.temperatureCap || 'measure_temperature');
       if (member.sensor && member.humidity) caps.push('measure_humidity');
       if (member.contact) caps.push('alarm_contact');
+      if (member.power) caps.push('measure_power');
       for (const cap of caps) {
         const listener = (value) => this.onMemberReport(member, cap, value);
         try {
@@ -397,7 +410,7 @@ module.exports = class zoneDevice extends mainDevice {
    * but only once per verify window: a device that keeps reporting the fault is left to verifySetpoint and its backoff.
    */
   onMemberReport(member, cap, value) {
-    if (cap.startsWith('measure_temperature') || cap === 'measure_humidity') {
+    if (cap.startsWith('measure_temperature') || cap === 'measure_humidity' || cap === 'measure_power') {
       // One device can report through several subscriptions (e.g. an A/C that is also the sensor): update once.
       if (!this.climateQueued) {
         this.climateQueued = true;
@@ -454,7 +467,8 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   /**
-   * @description Zone temperature and humidity: average of the available sensors' readings.
+   * @description Zone temperature and humidity: average of the available sensors' readings. Heating power: sum of the
+   * available power meters.
    */
   updateClimate(ms) {
     // A reading is used while the sensor is available in Homey.
@@ -475,6 +489,27 @@ module.exports = class zoneDevice extends mainDevice {
       this.climate[cap] = value;
       this.setValue(cap, value, false, 0).catch(this.error);
     }
+    const watts = this.getMembers()
+      .filter((member) => member.power)
+      .map((member) => this.members.read(member.id, 'measure_power'))
+      .filter((reading) => reading && typeof reading.value === 'number' && reading.available)
+      .map((reading) => reading.value);
+    const power = watts.length ? Math.round(watts.reduce((sum, value) => sum + value, 0)) : null;
+    if (this.climate[POWER] !== power) {
+      this.climate[POWER] = power;
+      this.setValue(POWER, power, false, 0)
+        .then(() => this.notifyPower())
+        .catch(this.error);
+    }
+  }
+
+  /**
+   * @description Let the controller sum the zones' heating power again.
+   * @param {boolean} deleted - This zone is being deleted
+   */
+  notifyPower(deleted = false) {
+    const controller = this.homey.app.findController();
+    if (controller) controller.updateHeatingPower(deleted ? this : null).catch(this.error);
   }
 
   /**

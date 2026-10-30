@@ -94,6 +94,8 @@ module.exports = class zoneDriver extends mainDriver {
           control: ['thermostat', 'ac', 'relay'].includes(member.control) ? member.control : null,
           sensor: !!member.sensor && (device.temperature || device.humidity),
           contact: !!member.contact && device.contact,
+          // Read only: the zone shows the meters' sum as its heating power.
+          power: !!member.power && device.power,
           temperature: device.temperature,
           // Which temperature capability the zone reads, e.g. measure_temperature.local on some thermostats.
           temperatureCap: chooseTemperature(device, member.temperatureCap),
