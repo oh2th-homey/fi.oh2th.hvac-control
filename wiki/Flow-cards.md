@@ -1,8 +1,7 @@
 # Flow cards
 
 Homey gives the standard cards for the standard parts of the devices: the season (thermostat
-mode), the price now, the comfort heat dial (target temperature) and Boost (on, off, toggle).
-The app adds these:
+mode), the price now and Boost (on, off, toggle). The app adds these:
 
 ## HVAC Controller
 
@@ -14,8 +13,8 @@ The app adds these:
 
 ## Heating Zone
 
-- Actions: **Set zone mode**, **Boost zone** (for a number of minutes), **Set eco heat**,
-  **Set comfort cool**, **Set eco cool**, **Follow home for 24 hours**,
-  **Use own occupancy setting**.
+- Actions: **Set zone mode**, **Boost zone** (for a number of minutes), **Set comfort heat**,
+  **Set eco heat**, **Set comfort cool**, **Set eco cool**, **Follow home for 24 hours**, **Use own
+  occupancy setting**.
 - Conditions: **Zone mode is**, **Zone is in eco**.
 - Triggers: **Eco changed**, **Target changed** (with the reason), **Member write failed**.

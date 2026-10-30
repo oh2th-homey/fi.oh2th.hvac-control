@@ -46,7 +46,10 @@
       "title": "Outdoor temperature",
       "subtitle": "Optional. Zones with an outdoor limit use it.",
       "sensor": "Sensor",
-      "none": "None"
+      "none": "None",
+      "exists": "You already have the HVAC Controller \"__name__\". One is enough for the whole home, so keep using it.",
+      "exists_next": "Next, add a Heating Zone for each room: Add device → Smart HVAC Control → Heating Zone.",
+      "close": "Close"
     }
   },
   "error": {

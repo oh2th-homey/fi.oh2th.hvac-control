@@ -22,6 +22,13 @@
   <button class="homey-button-primary-full" id="out-save" data-i18n="pair.members.save"></button>
 </form>
 
+<!-- Shown instead of the form when the controller exists already. -->
+<div id="out-exists" style="display: none">
+  <p id="out-exists-text"></p>
+  <p data-i18n="pair.outdoor.exists_next"></p>
+  <button class="homey-button-primary-full" id="out-close" data-i18n="pair.outdoor.close"></button>
+</div>
+
 <script type="application/javascript">
   (function () {
     // Own scope: Homey loads pairing views into one document, so top-level const/let would clash between pages.
@@ -78,6 +85,14 @@
     (async () => {
       try {
         const result = await Homey.emit('get_outdoor');
+        if (result.exists) {
+          document.querySelector('.homey-header').style.display = 'none';
+          document.querySelector('.homey-form').style.display = 'none';
+          document.getElementById('out-exists-text').textContent = result.exists;
+          document.getElementById('out-close').addEventListener('click', () => Homey.done());
+          document.getElementById('out-exists').style.display = '';
+          return;
+        }
         sensors = result.sensors;
         repair = result.repair === true;
         sensorEl.appendChild(option('', Homey.__('pair.outdoor.none')));

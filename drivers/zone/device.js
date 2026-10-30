@@ -7,10 +7,13 @@ const pipeline = require('../../lib/pipeline');
 
 const VERIFY_MS = 60 * 1000;
 const RETRY_BACKOFF_MIN = [15, 30, 60];
-const HEAT = 'target_temperature';
+// The setpoints are sub-capabilities; the main dial shows the target now (read only) and the zone temperature.
+const HEAT = 'target_temperature.comfort';
 const ECO = 'target_temperature.eco';
 const COOL = 'target_temperature.cool';
 const ECO_COOL = 'target_temperature.eco_cool';
+const TARGET = 'target_temperature';
+const TEMPERATURE = 'measure_temperature';
 const COOL_OPTIONS = { title: { en: 'Comfort cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
 const ECO_COOL_OPTIONS = { title: { en: 'Eco cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
 const FOLLOW_STEP_MS = 24 * 60 * 60 * 1000;
@@ -50,7 +53,6 @@ module.exports = class zoneDevice extends mainDevice {
     this.issues = [];
     this.lastShared = this.getStoreValue('lastShared') || null;
     this.memberState = this.getStoreValue('memberState') || {};
-    await this.migratePriceSetting();
   }
 
   async onDeleted() {
@@ -71,26 +73,16 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   /**
-   * @description Comfort cool and eco cool are shown only when the zone has cooling, that is an A/C member. Zones from before the eco
-   * setpoints get them from their old setback (comfort heat minus it, comfort cool plus it).
+   * @description Comfort cool and eco cool are shown only when the zone has cooling, that is an A/C member.
    */
   async checkCapabilities() {
     const capabilities = [...(this.driver.manifest.capabilities || [])];
     if (this.hasCooling()) capabilities.push(COOL, ECO_COOL);
     // Follow home shows only while it runs.
     if (this.followUntil(Date.now())) capabilities.push(FOLLOW_CAP);
-    const setback = this.hasCapability('num_setback') ? this.getCapabilityValue('num_setback') : null;
-    if (typeof setback === 'number') await this.setStoreValue('setback', setback).catch(this.error);
     const result = await updateCapabilities(this, capabilities, this.getCapabilities());
     if (result.added.includes(COOL)) await this.setCapabilityOptions(COOL, COOL_OPTIONS).catch(this.error);
     if (result.added.includes(ECO_COOL)) await this.setCapabilityOptions(ECO_COOL, ECO_COOL_OPTIONS).catch(this.error);
-    const oldSetback = this.getStoreValue('setback');
-    if (typeof oldSetback === 'number') {
-      const heat = this.getCapabilityValue(HEAT);
-      const cool = this.getCapabilityValue(COOL);
-      if (result.added.includes(ECO) && typeof heat === 'number') await this.setValue(ECO, Math.max(SETPOINTS[ECO].min, heat - oldSetback), true);
-      if (result.added.includes(ECO_COOL) && typeof cool === 'number') await this.setValue(ECO_COOL, Math.min(SETPOINTS[ECO_COOL].max, cool + oldSetback), true);
-    }
     for (const key of [COOL, ECO_COOL]) {
       if (this.hasCapability(key) && !this.setpointListeners[key]) {
         this.registerCapabilityListener(key, (value) => this.changeSetpoint(key, value));
@@ -105,7 +97,7 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   async setCapabilityListeners() {
-    this.registerCapabilityListener(HEAT, this.onCapability_TARGET_TEMPERATURE.bind(this));
+    this.registerCapabilityListener(HEAT, this.onCapability_TARGET_TEMPERATURE_COMFORT.bind(this));
     this.registerCapabilityListener(ECO, this.onCapability_ECO_HEAT.bind(this));
     this.registerCapabilityListener('enum_zone_mode', this.onCapability_ZONE_MODE.bind(this));
     this.registerCapabilityListener('power_boost', this.onCapability_POWER_BOOST.bind(this));
@@ -167,9 +159,9 @@ module.exports = class zoneDevice extends mainDevice {
    * Capabilities
    */
   /**
-   * @description Comfort heat setpoint (the main dial).
+   * @description Comfort heat setpoint.
    */
-  async onCapability_TARGET_TEMPERATURE(value) {
+  async onCapability_TARGET_TEMPERATURE_COMFORT(value) {
     return this.changeSetpoint(HEAT, value);
   }
 
@@ -257,6 +249,13 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   /**
+   * @description Set the comfort heat setpoint.
+   */
+  async onAction_SET_TARGET_TEMPERATURE_COMFORT(value) {
+    return this.onCapability_TARGET_TEMPERATURE_COMFORT(value);
+  }
+
+  /**
    * @description Set the comfort cool setpoint.
    */
   async onAction_SET_TARGET_TEMPERATURE_COOL(value) {
@@ -311,21 +310,6 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   /**
-   * @description Zones from before At price peaks: convert Use prices (never → ignore) and When expensive once.
-   */
-  async migratePriceSetting() {
-    if (this.getStoreValue('pricePeakMigrated')) return;
-    const use = this.getSetting('price_use');
-    if (use !== undefined && use !== null) {
-      let peak = this.getSetting('price_action') === 'off' ? 'off' : 'eco';
-      if (use === 'never') peak = 'ignore';
-      await this.setSettings({ price_peak: peak }).catch(this.error);
-      this.log(`${this.getName()} - migratePriceSetting - price_peak ${peak}`);
-    }
-    await this.setStoreValue('pricePeakMigrated', true).catch(this.error);
-  }
-
-  /**
    * @description End of Follow home (ms), or null when off or run out.
    */
   followUntil(ms) {
@@ -372,7 +356,6 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   async subscribeMembers() {
-    await this.detectOffModes();
     for (const member of this.getMembers()) {
       const caps = [];
       if (member.control === 'thermostat' || member.control === 'ac') caps.push('target_temperature');
@@ -393,20 +376,6 @@ module.exports = class zoneDevice extends mainDevice {
         }
       }
     }
-  }
-
-  /**
-   * @description Thermostats added before the off switch was stored: find out once how to switch them off.
-   */
-  async detectOffModes() {
-    const members = this.getMembers();
-    const unknown = members.filter((member) => member.control === 'thermostat' && member.offSwitch === undefined);
-    if (!unknown.length) return;
-    for (const member of unknown) {
-      member.offSwitch = await this.members.offSwitch(member.id).catch(() => null);
-      this.log(`${this.getName()} - detectOffModes - ${member.name}: ${member.offSwitch || 'none'}`);
-    }
-    await this.setStoreValue('members', members).catch(this.error);
   }
 
   unsubscribeMembers() {
@@ -500,7 +469,7 @@ module.exports = class zoneDevice extends mainDevice {
     };
     // A repeated sensor event must not set the same value twice while the first set is still in flight.
     this.climate = this.climate || {};
-    for (const cap of ['measure_temperature', 'measure_humidity']) {
+    for (const cap of [TEMPERATURE, 'measure_humidity']) {
       const value = round1(average(cap));
       if (this.climate[cap] === value) continue;
       this.climate[cap] = value;
@@ -561,7 +530,7 @@ module.exports = class zoneDevice extends mainDevice {
         outdoorLimit: { enabled: this.getSetting('outdoor_limit') === true, onBelow: this.getSetting('outdoor_on_below'), offAbove: this.getSetting('outdoor_off_above') },
         outdoorAllowed: this.getStoreValue('outdoorAllowed')
       },
-      temperature: this.getCapabilityValue('measure_temperature'),
+      temperature: this.getCapabilityValue(TEMPERATURE),
       now: ms
     });
     this.decision = decision;
@@ -574,9 +543,9 @@ module.exports = class zoneDevice extends mainDevice {
 
     const target = round1(decision.target);
     const reason = this.reasonText();
-    const changed = target !== null && target !== this.getCapabilityValue('measure_temperature.set_target');
+    const changed = target !== null && target !== this.getCapabilityValue(TARGET);
     // No target in manual or when members are off: show none instead of the last one.
-    await this.setValue('measure_temperature.set_target', target, firstRun);
+    await this.setValue(TARGET, target, firstRun);
     await this.setValue('is_eco', decision.eco, firstRun);
     await this.setValue('text_reason', reason, firstRun);
     // Only real problems: member write failed, relays without temperature, low temperature, controller missing for over an hour.
@@ -613,7 +582,7 @@ module.exports = class zoneDevice extends mainDevice {
     for (const member of this.getMembers().filter((m) => m.control === 'thermostat' || m.control === 'ac')) {
       try {
         const st = this.state(member);
-        const plan = pipeline.memberPlan(this.decision, member, { temperature: this.getCapabilityValue('measure_temperature'), lastMode: st.mode });
+        const plan = pipeline.memberPlan(this.decision, member, { temperature: this.getCapabilityValue(TEMPERATURE), lastMode: st.mode });
         if (plan.skip) continue;
         for (const reason of plan.reasons) this.issue(member, reason.code, reason.args);
 
@@ -780,7 +749,7 @@ module.exports = class zoneDevice extends mainDevice {
         const target = this.decision.action === 'heat' ? this.decision.target : null;
         const result = pipeline.relay({
           on,
-          temperature: this.getCapabilityValue('measure_temperature'),
+          temperature: this.getCapabilityValue(TEMPERATURE),
           target,
           eco: this.decision.eco === true,
           heating: true,

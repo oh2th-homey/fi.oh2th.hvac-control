@@ -5,10 +5,12 @@ const mainDriver = require('../main-driver');
 module.exports = class hvacDriver extends mainDriver {
   /**
    * @description Pairing: exactly one HVAC Controller, with an optional outdoor temperature sensor.
+   * When it exists already, the page points to it and to adding zones instead.
    */
   async onPair(session) {
     session.setHandler('get_outdoor', async () => {
-      if (this.getDevices().length > 0) throw new Error(this.homey.__('pair.hvac_exists'));
+      const [existing] = this.getDevices();
+      if (existing) return { exists: this.homey.__('pair.outdoor.exists', { name: existing.getName() }) };
       return { sensors: await this.outdoorSensors(), outdoor: null, repair: false };
     });
     session.setHandler('create_controller', async ({ outdoor }) => {

@@ -5,9 +5,9 @@
   "class": "thermostat",
   "capabilities": [
     "target_temperature",
-    "target_temperature.eco",
-    "measure_temperature.set_target",
     "measure_temperature",
+    "target_temperature.comfort",
+    "target_temperature.eco",
     "measure_humidity",
     "enum_zone_mode",
     "power_boost",
@@ -16,7 +16,7 @@
     "alarm_problem"
   ],
   "capabilitiesOptions": {
-    "target_temperature": {
+    "target_temperature.comfort": {
       "title": {
         "en": "Comfort heat"
       },
@@ -46,10 +46,14 @@
       "uiComponent": "button",
       "icon": "./assets/capabilities/power_boost.svg"
     },
-    "measure_temperature.set_target": {
+    "target_temperature": {
       "title": {
         "en": "Target now"
       },
+      "setable": false,
+      "min": 5,
+      "max": 32,
+      "step": 0.5,
       "decimals": 1
     }
   },

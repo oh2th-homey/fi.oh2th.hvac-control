@@ -9,15 +9,16 @@ settings.
 
 The zone shows:
 
-- **Comfort heat** (the main dial) and **Eco heat**. Comfort is used when someone is home, eco
-  when nobody is home or the price is high. Eco is never warmer than comfort; if you move one past
-  the other, both move.
+- **Comfort heat** and **Eco heat**. Comfort is used when someone is home, eco when nobody is
+  home or the price is high. Eco is never warmer than comfort; if you move one past the other,
+  both move.
 - **Comfort cool** and **Eco cool**, only when the zone has an air conditioner. Eco cool is never
   cooler than comfort cool. A zone without one switches its devices off in the cooling season.
 - **Zone mode**: Auto, Manual or Off. In Manual the app leaves the devices alone. Off switches
   the zone's devices off.
 - **Boost**: comfort plus the boost amount for the boost time. Press it again to stop early.
-- **Target now**: the temperature the zone aims at right now.
+- **Target now** (the dial, read only): the temperature the zone aims at right now. Change
+  comfort heat and eco heat instead.
 - **Follow home**: hours left, shown only while a temporary Follow home runs (see
   [Guests in the guest room](How-to#guests-in-the-guest-room)).
 - The zone temperature and humidity, and a **Reason** that explains what the zone does.

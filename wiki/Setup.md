@@ -2,7 +2,8 @@
 
 1. Add the **HVAC Controller** first. You can add only one, and zones need it. It holds what all
    zones share: occupancy, season, long absence, prices and the outdoor temperature. When you add
-   it, you can pick an outdoor temperature sensor.
+   it, you can pick an outdoor temperature sensor. If you try to add a second one, the app points
+   you to the existing controller; go on with the zones.
 
    <img src="images/controller-outdoor.png" alt="Picking the outdoor temperature sensor" width="300">
 

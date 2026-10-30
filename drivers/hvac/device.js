@@ -15,10 +15,6 @@ const OUTDOOR_MAX_AGE_MS = 3 * 60 * 60 * 1000;
 
 module.exports = class hvacDevice extends mainDevice {
   async onInitDevice() {
-    // The outdoor temperature came from a flow card before 1.0.1.
-    if (this.getStoreValue('outdoorAt') !== null) await this.unsetStoreValue('outdoorAt').catch(this.error);
-    // Mode (Auto / Long absence) became the Long absence button in 1.0.1; checkCapabilities removes the old one.
-    if (this.hasCapability('enum_master_mode')) await this.setStoreValue('longAbsence', this.getCapabilityValue('enum_master_mode') === 'long_absence');
     await this.subscribeOutdoor();
   }
 
@@ -35,8 +31,7 @@ module.exports = class hvacDevice extends mainDevice {
   async onSettings({ oldSettings, newSettings, changedKeys }) {
     this.log(`${this.getName()} - onSettings - changed: ${changedKeys}`);
     if (!isTime(newSettings.tomorrow_check_time)) throw new Error(this.homey.__('error.invalid_time'));
-    // Controllers paired before the setting existed have none yet: that means €.
-    const currency = String(newSettings.currency ?? '€').trim();
+    const currency = String(newSettings.currency).trim();
     if (currency.length < 1 || currency.length > 5) throw new Error(this.homey.__('error.invalid_currency'));
     if (changedKeys.includes('currency')) await this.applyCurrency(currency);
     if (newSettings.absence_until !== '' && !isDate(newSettings.absence_until)) throw new Error(this.homey.__('error.invalid_date'));
@@ -77,10 +72,7 @@ module.exports = class hvacDevice extends mainDevice {
       if (check) await this.applyCurrency();
       if (!OCCUPANCY.includes(this.getCapabilityValue('enum_occupancy'))) await this.setValue('enum_occupancy', 'present', check);
       if (!MODE_SEASON[this.getCapabilityValue('thermostat_mode')]) await this.setValue('thermostat_mode', 'heat', check);
-      if (typeof this.getCapabilityValue('is_long_absence') !== 'boolean') {
-        const migrated = this.getStoreValue('longAbsence');
-        await this.setValue('is_long_absence', migrated === true || this.getSetting('absence_until') !== '', check);
-      }
+      if (typeof this.getCapabilityValue('is_long_absence') !== 'boolean') await this.setValue('is_long_absence', this.getSetting('absence_until') !== '', check);
       await this.evaluatePrices(this.getSettings(), check);
     } catch (error) {
       this.setUnavailable(error).catch(this.error);
