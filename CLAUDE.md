@@ -82,6 +82,7 @@ lib/helpers.js              app-specific helpers only (generic ones: oh2th-homey
 lib/flows/actions.js        exports.init(ctx): register action run listeners
 lib/flows/conditions.js     exports.init(ctx): register condition run listeners
 lib/<name>.js               one class per external API/protocol, plus pure logic modules
+tools/<name>.js             developer tools run with node on a computer, not in the app (.homeyignore)
 .homeycompose/app.json, capabilities/*.json, flow/{actions,conditions,triggers}/*.json,
 .homeycompose/drivers/templates/*.json   (device.json, settings.json, pair-*.json)
 locales/en.json, assets/, local_assets/ (sources, in .gitignore and .homeyignore), .github/FUNDING.yml,

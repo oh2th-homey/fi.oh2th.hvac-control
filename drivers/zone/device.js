@@ -18,6 +18,8 @@ const COOL_OPTIONS = { title: { en: 'Comfort cool' }, min: 16, max: 32, step: 0.
 const ECO_COOL_OPTIONS = { title: { en: 'Eco cool' }, min: 16, max: 32, step: 0.5, decimals: 1 };
 const POWER = 'measure_power.heating';
 const POWER_OPTIONS = { title: { en: 'Heating power' }, units: { en: 'W' }, decimals: 0 };
+// Meters report every few seconds with a watt or two of noise: heating power shows changes of at least this (W).
+const POWER_STEP = 5;
 const FOLLOW_STEP_MS = 24 * 60 * 60 * 1000;
 // Boost from a flow token is capped like the card's own limit.
 const MAX_BOOST_MINUTES = 1440;
@@ -494,9 +496,13 @@ module.exports = class zoneDevice extends mainDevice {
       .map((member) => this.members.read(member.id, 'measure_power'))
       .filter((reading) => reading && typeof reading.value === 'number' && reading.available)
       .map((reading) => reading.value);
-    const power = watts.length ? Math.round(watts.reduce((sum, value) => sum + value, 0)) : null;
-    this.addEnergy(ms, power);
-    if (this.climate[POWER] !== power) {
+    const exact = watts.length ? watts.reduce((sum, value) => sum + value, 0) : null;
+    // Energy from every reading as it is; only the shown value has a dead band.
+    this.addEnergy(ms, exact);
+    const power = exact === null ? null : Math.round(exact);
+    const shown = this.climate[POWER];
+    const changed = typeof shown !== 'number' || power === null ? shown !== power : Math.abs(power - shown) >= POWER_STEP;
+    if (changed) {
       this.climate[POWER] = power;
       this.setValue(POWER, power, false, 0)
         .then(() => this.notifyPower())
@@ -517,7 +523,7 @@ module.exports = class zoneDevice extends mainDevice {
    * @description The quarter that just ended, for the history (lib/history.js); restarts the energy count.
    */
   historySample(ms) {
-    this.addEnergy(ms, this.climate ? this.climate[POWER] : null);
+    this.addEnergy(ms, this.energy ? this.energy.power : null);
     const energy = this.hasPower() ? this.energy.wh : null;
     this.energy.wh = 0;
     const decision = this.decision || {};
