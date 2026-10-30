@@ -495,12 +495,46 @@ module.exports = class zoneDevice extends mainDevice {
       .filter((reading) => reading && typeof reading.value === 'number' && reading.available)
       .map((reading) => reading.value);
     const power = watts.length ? Math.round(watts.reduce((sum, value) => sum + value, 0)) : null;
+    this.addEnergy(ms, power);
     if (this.climate[POWER] !== power) {
       this.climate[POWER] = power;
       this.setValue(POWER, power, false, 0)
         .then(() => this.notifyPower())
         .catch(this.error);
     }
+  }
+
+  /**
+   * @description Heating energy since the last history sample (Wh): each power reading times how long it lasted.
+   */
+  addEnergy(ms, power) {
+    const last = this.energy;
+    const wh = last ? last.wh + (typeof last.power === 'number' ? (last.power * Math.max(0, ms - last.at)) / 3600000 : 0) : 0;
+    this.energy = { power, at: ms, wh };
+  }
+
+  /**
+   * @description The quarter that just ended, for the history (lib/history.js); restarts the energy count.
+   */
+  historySample(ms) {
+    this.addEnergy(ms, this.climate ? this.climate[POWER] : null);
+    const energy = this.hasPower() ? this.energy.wh : null;
+    this.energy.wh = 0;
+    const decision = this.decision || {};
+    return {
+      temperature: this.getCapabilityValue(TEMPERATURE),
+      target: this.getCapabilityValue(TARGET),
+      low: decision.band ? decision.band.low : null,
+      high: decision.band ? decision.band.high : null,
+      energy,
+      humidity: this.getCapabilityValue('measure_humidity'),
+      action: decision.action || null,
+      aim: decision.aim || null,
+      windowOpen: this.windowWasOpen === true,
+      // The price peak acted: eco or off because of the price, not only a zone that follows prices.
+      pricePeak: decision.priceDriven === true && (decision.eco === true || decision.offCause === 'expensive_off'),
+      lowTemperature: decision.lowTemperature === true
+    };
   }
 
   /**

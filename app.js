@@ -1,10 +1,11 @@
 'use strict';
 
 const Homey = require('homey');
-const { startMinuteInterval, stopMinuteInterval, dispatchInterval, forEachDevice, isImperial } = require('oh2th-homey-helpers');
+const { startMinuteInterval, stopMinuteInterval, dispatchInterval, forEachDevice, isImperial, localDate, localTime } = require('oh2th-homey-helpers');
 const flowActions = require('./lib/flows/actions');
 const flowConditions = require('./lib/flows/conditions');
 const Members = require('./lib/members');
+const { History, QUARTER_MS } = require('./lib/history');
 
 module.exports = class HvacControlApp extends Homey.App {
   /**
@@ -15,6 +16,8 @@ module.exports = class HvacControlApp extends Homey.App {
 
     // Other apps' devices (zone members), through the Homey Web API.
     this.members = new Members(this);
+    // Quarter-hour history on disk for learning and replay.
+    this.history = new History(this);
 
     await flowActions.init(this);
     await flowConditions.init(this);
@@ -31,7 +34,37 @@ module.exports = class HvacControlApp extends Homey.App {
    */
   async onInterval(now) {
     await this.members.refresh().catch((error) => this.error(`onInterval - members refresh - ${error}`));
+    // Before the devices evaluate the new quarter, so the row has the state of the quarter that ended.
+    if (localTime(this, now).minutes % 15 === 0) await this.recordHistory(now).catch((error) => this.error(`onInterval - history - ${error}`));
     await dispatchInterval(this, now);
+  }
+
+  /**
+   * @description Append the quarter that just ended to the history: controller state and every zone's sample.
+   */
+  async recordHistory(now) {
+    const quarter = (Math.round(now.getTime() / QUARTER_MS) - 1) * QUARTER_MS;
+    const timeZone = this.homey.clock.getTimezone();
+    const controller = this.findController();
+    const shared = controller ? controller.getSharedState() : {};
+    const zones = [];
+    for (const zone of this.homey.drivers.getDriver('zone').getDevices()) {
+      if (typeof zone.historySample !== 'function') continue;
+      zones.push({ slot: await this.history.slot(zone.getData().id, zone.getName()), ...zone.historySample(now.getTime()) });
+    }
+    const date = localDate(timeZone, quarter);
+    await this.history.append(date, {
+      quarter,
+      outdoor: shared.outdoor,
+      price: shared.price,
+      occupancy: shared.occupancy,
+      season: shared.season,
+      longAbsence: shared.longAbsence,
+      expensive: shared.expensive,
+      zones
+    });
+    // The first quarter of a day: drop the files older than two weeks.
+    if (localDate(timeZone, now.getTime()) !== date) await this.history.prune(localDate(timeZone, now.getTime()));
   }
 
   /**
