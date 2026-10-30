@@ -24,6 +24,9 @@ The zone shows:
 - The zone temperature and humidity, and a **Reason** that explains what the zone does.
 - **Heating power**, only when the zone has power meters: the sum of their readings. In Homey
   Energy and Climate, count either the zone or its own devices, not both (see [Setup](Setup)).
+- With power meters also **Energy today**, **Cost today** (from the price of each quarter) and
+  **Price paid today**: cost per kWh. Compare it with the controller's **Average price today**:
+  lower means the zone heated in cheaper hours. They start again at midnight.
 
 <img src="images/zone-device.png" alt="A zone in eco during a price peak" width="300">
 

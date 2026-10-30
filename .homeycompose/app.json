@@ -24,6 +24,10 @@
     "getHistory": {
       "method": "GET",
       "path": "/history"
+    },
+    "getHistoryDays": {
+      "method": "GET",
+      "path": "/history/days"
     }
   },
   "images": {

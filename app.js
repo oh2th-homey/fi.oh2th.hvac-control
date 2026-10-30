@@ -5,7 +5,8 @@ const { startMinuteInterval, stopMinuteInterval, dispatchInterval, forEachDevice
 const flowActions = require('./lib/flows/actions');
 const flowConditions = require('./lib/flows/conditions');
 const Members = require('./lib/members');
-const { History, QUARTER_MS } = require('./lib/history');
+const { History, QUARTER_MS, CONTROLLER_SLOT } = require('./lib/history');
+const daily = require('./lib/daily');
 
 module.exports = class HvacControlApp extends Homey.App {
   /**
@@ -45,14 +46,27 @@ module.exports = class HvacControlApp extends Homey.App {
   async recordHistory(now) {
     const quarter = (Math.round(now.getTime() / QUARTER_MS) - 1) * QUARTER_MS;
     const timeZone = this.homey.clock.getTimezone();
+    const date = localDate(timeZone, quarter);
     const controller = this.findController();
     const shared = controller ? controller.getSharedState() : {};
     const zones = [];
+    // Daily summary rows of the day that ended (at the first quarter of a new day).
+    const days = [];
     for (const zone of this.homey.drivers.getDriver('zone').getDevices()) {
       if (typeof zone.historySample !== 'function') continue;
-      zones.push({ slot: await this.history.slot(zone.getData().id, zone.getName()), ...zone.historySample(now.getTime()) });
+      const slot = await this.history.slot(zone.getData().id, zone.getName());
+      const sample = zone.historySample(now.getTime());
+      zones.push({ slot, ...sample });
+      const finished = await zone.addToDay(date, sample, shared.price);
+      if (finished) days.push(daily.row(finished, slot));
     }
-    const date = localDate(timeZone, quarter);
+    if (controller) {
+      const metered = zones.filter((zone) => typeof zone.energy === 'number');
+      const energy = metered.length ? metered.reduce((sum, zone) => sum + zone.energy, 0) : null;
+      const finished = await controller.addToDay(date, { energy, price: shared.price, outdoor: shared.outdoor, expensive: shared.expensive });
+      if (finished) days.push(daily.row(finished, CONTROLLER_SLOT));
+    }
+    await this.history.appendDays(days);
     await this.history.append(date, {
       quarter,
       outdoor: shared.outdoor,
@@ -63,8 +77,16 @@ module.exports = class HvacControlApp extends Homey.App {
       expensive: shared.expensive,
       zones
     });
-    // The first quarter of a day: drop the files older than two weeks.
+    // The first quarter of a day: drop the files older than KEEP_DAYS.
     if (localDate(timeZone, now.getTime()) !== date) await this.history.prune(localDate(timeZone, now.getTime()));
+  }
+
+  /**
+   * @description Currency symbol from the HVAC Controller setting (default €).
+   */
+  currencySymbol() {
+    const controller = this.findController();
+    return String((controller && controller.getSetting('currency')) || '€').trim() || '€';
   }
 
   /**

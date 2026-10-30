@@ -16,6 +16,9 @@ The controller holds what all zones share. You can add only one.
 - **Heating power**, only when a zone has power meters: the sum of the zones' heating power.
   In Homey Energy, count either the controller, the zones or the meters, not more than one (see
   [Setup](Setup)).
+- **Energy today**, **Cost today** and **Price paid today** of all zones with power meters, and
+  **Average price today** (mean of today's prices so far). A price paid below the average means
+  heating was moved to cheaper hours.
 - **Reason**: why the price is expensive or not, for example `Normal`.
 
 <img src="images/controller-device.png" alt="HVAC Controller during a price peak" width="300">

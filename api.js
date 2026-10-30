@@ -12,5 +12,13 @@ module.exports = {
     if (!isDate(date)) throw new Error(homey.__('error.invalid_date'));
     const { version, zones, data } = await homey.app.history.read(date);
     return { version, date, zones, data: data ? data.toString('base64') : null };
+  },
+
+  /**
+   * @description GET /history/days: the daily summary rows (lib/history.js days.bin, base64) and the zone slot map.
+   */
+  async getHistoryDays({ homey }) {
+    const { version, zones, data } = await homey.app.history.readDays();
+    return { version, zones, data: data ? data.toString('base64') : null };
   }
 };

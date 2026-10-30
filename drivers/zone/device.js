@@ -4,6 +4,7 @@ const { localTime, updateCapabilities, serialize, formatTemperature, formatDiffe
 const mainDevice = require('../main-device');
 const zone = require('../../lib/zone');
 const pipeline = require('../../lib/pipeline');
+const daily = require('../../lib/daily');
 
 const VERIFY_MS = 60 * 1000;
 const RETRY_BACKOFF_MIN = [15, 30, 60];
@@ -19,6 +20,10 @@ const ECO_COOL_OPTIONS = { title: { en: 'Eco cool' }, min: 16, max: 32, step: 0.
 const POWER = 'measure_power.heating';
 const POWER_OPTIONS = { title: { en: 'Heating power' }, units: { en: 'W' }, decimals: 0 };
 // Meters report every few seconds with a watt or two of noise: heating power shows changes of at least this (W).
+// Today's energy, cost and price paid, shown with the power meters (lib/daily.js).
+const ENERGY_TODAY = 'meter_power.today';
+const COST_TODAY = 'num_cost_today';
+const PRICE_PAID = 'num_price_paid';
 const POWER_STEP = 5;
 const FOLLOW_STEP_MS = 24 * 60 * 60 * 1000;
 // Boost from a flow token is capped like the card's own limit.
@@ -42,6 +47,14 @@ const DIFFERENCE_ARGS = ['step'];
 
 function round1(value) {
   return typeof value === 'number' && Number.isFinite(value) ? Math.round(value * 10) / 10 : null;
+}
+
+function round3(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.round(value * 1000) / 1000 : null;
+}
+
+function round4(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.round(value * 10000) / 10000 : null;
 }
 
 module.exports = class zoneDevice extends mainDevice {
@@ -86,13 +99,15 @@ module.exports = class zoneDevice extends mainDevice {
   async checkCapabilities() {
     const capabilities = [...(this.driver.manifest.capabilities || [])];
     if (this.hasCooling()) capabilities.push(COOL, ECO_COOL);
-    if (this.hasPower()) capabilities.push(POWER);
+    if (this.hasPower()) capabilities.push(POWER, ENERGY_TODAY, COST_TODAY, PRICE_PAID);
     // Follow home shows only while it runs.
     if (this.followUntil(Date.now())) capabilities.push(FOLLOW_CAP);
     const result = await updateCapabilities(this, capabilities, this.getCapabilities());
     if (result.added.includes(COOL)) await this.setCapabilityOptions(COOL, COOL_OPTIONS).catch(this.error);
     if (result.added.includes(ECO_COOL)) await this.setCapabilityOptions(ECO_COOL, ECO_COOL_OPTIONS).catch(this.error);
     if (result.added.includes(POWER)) await this.setCapabilityOptions(POWER, POWER_OPTIONS).catch(this.error);
+    if (result.added.includes(ENERGY_TODAY)) await this.setCapabilityOptions(ENERGY_TODAY, { title: { en: 'Energy today' }, units: { en: 'kWh' }, decimals: 2 }).catch(this.error);
+    if (result.added.includes(COST_TODAY)) await this.applyCurrency();
     for (const key of [COOL, ECO_COOL]) {
       if (this.hasCapability(key) && !this.setpointListeners[key]) {
         this.registerCapabilityListener(key, (value) => this.changeSetpoint(key, value));
@@ -108,6 +123,15 @@ module.exports = class zoneDevice extends mainDevice {
 
   hasPower() {
     return this.getMembers().some((member) => member.power);
+  }
+
+  /**
+   * @description Cost today and price paid in the controller's currency.
+   */
+  async applyCurrency(symbol = this.homey.app.currencySymbol()) {
+    const options = (id, units) => ({ title: this.homey.manifest.capabilities[id].title, decimals: this.homey.manifest.capabilities[id].decimals, units: { en: units } });
+    if (this.hasCapability(COST_TODAY)) await this.setCapabilityOptions(COST_TODAY, options(COST_TODAY, symbol)).catch(this.error);
+    if (this.hasCapability(PRICE_PAID)) await this.setCapabilityOptions(PRICE_PAID, options(PRICE_PAID, `${symbol}/kWh`)).catch(this.error);
   }
 
   async setCapabilityListeners() {
@@ -148,7 +172,7 @@ module.exports = class zoneDevice extends mainDevice {
       await this.evaluate({ urgent: true });
       return;
     }
-    const minutes = localTime(this, now).minutes;
+    const { minutes } = localTime(this, now);
     if (this.failedSubscriptions && this.failedSubscriptions.length && minutes % 5 === 0) await this.retrySubscriptions();
     this.updateClimate(ms);
     if (await this.updateFollowHours(ms)) {
@@ -568,6 +592,23 @@ module.exports = class zoneDevice extends mainDevice {
       pricePeak: decision.priceDriven === true && (decision.eco === true || decision.offCause === 'expensive_off'),
       lowTemperature: decision.lowTemperature === true
     };
+  }
+
+  /**
+   * @description Add the quarter to today's energy and cost (lib/daily.js); at the first quarter of a new day returns the
+   * finished day for the daily summary.
+   * @param {string} date - Local date of the quarter
+   * @param {Object} sample - From historySample
+   * @param {number|null} price - The quarter's price
+   */
+  async addToDay(date, sample, price) {
+    const { day, finished } = daily.addQuarter(this.getStoreValue('day'), date, { energy: sample.energy, price, temperature: sample.temperature, eco: sample.aim === 'eco' });
+    await this.setStoreValue('day', day).catch(this.error);
+    const today = daily.summary(day);
+    await this.setValue(ENERGY_TODAY, round3(today.kWh));
+    await this.setValue(COST_TODAY, round4(today.cost));
+    await this.setValue(PRICE_PAID, round4(today.pricePaid));
+    return finished;
   }
 
   /**

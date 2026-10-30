@@ -1,0 +1,14 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Cost today"
+  },
+  "hint": {
+    "en": "Heating cost today, from the energy and the price of each quarter."
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": true
+}

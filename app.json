@@ -25,6 +25,10 @@
     "getHistory": {
       "method": "GET",
       "path": "/history"
+    },
+    "getHistoryDays": {
+      "method": "GET",
+      "path": "/history/days"
     }
   },
   "images": {
@@ -1473,6 +1477,20 @@
       },
       "icon": "./assets/capabilities/is_long_absence.svg"
     },
+    "num_cost_today": {
+      "type": "number",
+      "title": {
+        "en": "Cost today"
+      },
+      "hint": {
+        "en": "Heating cost today, from the energy and the price of each quarter."
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
+    },
     "num_follow_home_hours": {
       "type": "number",
       "title": {
@@ -1491,6 +1509,34 @@
       "uiComponent": "sensor",
       "insights": false,
       "icon": "./assets/capabilities/enum_occupancy.svg"
+    },
+    "num_price_average": {
+      "type": "number",
+      "title": {
+        "en": "Average price today"
+      },
+      "hint": {
+        "en": "Mean of today's prices so far, to compare with the price paid."
+      },
+      "decimals": 4,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
+    },
+    "num_price_paid": {
+      "type": "number",
+      "title": {
+        "en": "Price paid today"
+      },
+      "hint": {
+        "en": "Heating cost today per kWh. Below the average price means heating was moved to cheaper hours."
+      },
+      "decimals": 4,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true
     },
     "text_prices_until": {
       "type": "string",

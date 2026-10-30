@@ -3,6 +3,7 @@
 const { localTime, strToMins, localDate, addDays, isDate, isTime, updateCapabilities } = require('oh2th-homey-helpers');
 const mainDevice = require('../main-device');
 const prices = require('../../lib/prices');
+const daily = require('../../lib/daily');
 
 const OCCUPANCY = ['present', 'coming_home', 'away'];
 const SEASONS = ['heating', 'cooling', 'off'];
@@ -16,6 +17,12 @@ const OUTDOOR_MAX_AGE_MS = 3 * 60 * 60 * 1000;
 const POWER = 'measure_power';
 const ZONE_POWER = 'measure_power.heating';
 const POWER_OPTIONS = { title: { en: 'Heating power' }, units: { en: 'W' }, decimals: 0 };
+// The zones' energy and cost today, and today's average price (lib/daily.js); shown with POWER.
+const ENERGY_TODAY = 'meter_power.today';
+const COST_TODAY = 'num_cost_today';
+const PRICE_PAID = 'num_price_paid';
+const PRICE_AVERAGE = 'num_price_average';
+const DAY_CAPS = [ENERGY_TODAY, COST_TODAY, PRICE_PAID, PRICE_AVERAGE];
 
 module.exports = class hvacDevice extends mainDevice {
   async onInitDevice() {
@@ -63,9 +70,11 @@ module.exports = class hvacDevice extends mainDevice {
     const capabilities = [...(this.driver.manifest.capabilities || [])];
     const zones = this.meteredZones(deleted);
     // Zones not loaded yet (app start): keep what is shown.
-    if (zones === null ? this.hasCapability(POWER) : zones.length) capabilities.push(POWER);
+    if (zones === null ? this.hasCapability(POWER) : zones.length) capabilities.push(POWER, ...DAY_CAPS);
     const result = await updateCapabilities(this, capabilities, this.getCapabilities());
     if (result.added.includes(POWER)) await this.setCapabilityOptions(POWER, POWER_OPTIONS).catch(this.error);
+    if (result.added.includes(ENERGY_TODAY)) await this.setCapabilityOptions(ENERGY_TODAY, { title: { en: 'Energy today' }, units: { en: 'kWh' }, decimals: 2 }).catch(this.error);
+    if (result.added.includes(COST_TODAY)) await this.applyCurrency();
     return result;
   }
 
@@ -109,6 +118,30 @@ module.exports = class hvacDevice extends mainDevice {
     // setCapabilityOptions replaces the manifest's options for this capability: pass title and decimals too.
     const { title, decimals } = this.driver.manifest.capabilitiesOptions.measure_monetary;
     await this.setCapabilityOptions('measure_monetary', { title, decimals, units: { en: `${symbol}/kWh` } }).catch(this.error);
+    const options = (id, units) => ({ title: this.homey.manifest.capabilities[id].title, decimals: this.homey.manifest.capabilities[id].decimals, units: { en: units } });
+    if (this.hasCapability(COST_TODAY)) await this.setCapabilityOptions(COST_TODAY, options(COST_TODAY, symbol)).catch(this.error);
+    for (const id of [PRICE_PAID, PRICE_AVERAGE]) {
+      if (this.hasCapability(id)) await this.setCapabilityOptions(id, options(id, `${symbol}/kWh`)).catch(this.error);
+    }
+    for (const zone of this.meteredZones() || []) await zone.applyCurrency(symbol);
+  }
+
+  /**
+   * @description Add the quarter to today's totals (lib/daily.js): the zones' energy, its cost, the outdoor temperature and the
+   * price. At the first quarter of a new day returns the finished day for the daily summary.
+   * @param {string} date - Local date of the quarter
+   * @param {Object} quarter - { energy (Wh, sum of the zones), price, outdoor, expensive }
+   */
+  async addToDay(date, { energy, price, outdoor, expensive }) {
+    const { day, finished } = daily.addQuarter(this.getStoreValue('day'), date, { energy, price, temperature: outdoor, eco: expensive === true });
+    await this.setStoreValue('day', day).catch(this.error);
+    const today = daily.summary(day);
+    const round = (value, digits) => (typeof value === 'number' && Number.isFinite(value) ? Math.round(value * 10 ** digits) / 10 ** digits : null);
+    await this.setValue(ENERGY_TODAY, round(today.kWh, 3));
+    await this.setValue(COST_TODAY, round(today.cost, 4));
+    await this.setValue(PRICE_PAID, round(today.pricePaid, 4));
+    await this.setValue(PRICE_AVERAGE, round(today.priceAverage, 4));
+    return finished;
   }
 
   async setCapabilityValues(check = false) {
