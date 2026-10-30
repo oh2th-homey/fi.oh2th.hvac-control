@@ -19,9 +19,9 @@ const ZONE_POWER = 'measure_power.heating';
 const POWER_OPTIONS = { title: { en: 'Heating power' }, units: { en: 'W' }, decimals: 0 };
 // The zones' energy and cost today, and today's average price (lib/daily.js); shown with POWER.
 const ENERGY_TODAY = 'meter_power.today';
-const COST_TODAY = 'num_cost_today';
-const PRICE_PAID = 'num_price_paid';
-const PRICE_AVERAGE = 'num_price_average';
+const COST_TODAY = 'measure_monetary.cost_today';
+const PRICE_PAID = 'measure_monetary.price_paid';
+const PRICE_AVERAGE = 'measure_monetary.price_average';
 const DAY_CAPS = [ENERGY_TODAY, COST_TODAY, PRICE_PAID, PRICE_AVERAGE];
 
 module.exports = class hvacDevice extends mainDevice {
@@ -63,12 +63,12 @@ module.exports = class hvacDevice extends mainDevice {
   }
 
   /**
-   * @description Heating power is shown only when a zone has a power meter.
+   * @description Heating power, energy and cost are shown only when a zone has a power meter.
    * @param {Object} [deleted] - Zone being deleted, left out
    */
   async checkCapabilities(deleted = null) {
-    const capabilities = [...(this.driver.manifest.capabilities || [])];
     const zones = this.meteredZones(deleted);
+    const capabilities = [...(this.driver.manifest.capabilities || [])];
     // Zones not loaded yet (app start): keep what is shown.
     if (zones === null ? this.hasCapability(POWER) : zones.length) capabilities.push(POWER, ...DAY_CAPS);
     const result = await updateCapabilities(this, capabilities, this.getCapabilities());
@@ -118,11 +118,10 @@ module.exports = class hvacDevice extends mainDevice {
     // setCapabilityOptions replaces the manifest's options for this capability: pass title and decimals too.
     const { title, decimals } = this.driver.manifest.capabilitiesOptions.measure_monetary;
     await this.setCapabilityOptions('measure_monetary', { title, decimals, units: { en: `${symbol}/kWh` } }).catch(this.error);
-    const options = (id, units) => ({ title: this.homey.manifest.capabilities[id].title, decimals: this.homey.manifest.capabilities[id].decimals, units: { en: units } });
-    if (this.hasCapability(COST_TODAY)) await this.setCapabilityOptions(COST_TODAY, options(COST_TODAY, symbol)).catch(this.error);
-    for (const id of [PRICE_PAID, PRICE_AVERAGE]) {
-      if (this.hasCapability(id)) await this.setCapabilityOptions(id, options(id, `${symbol}/kWh`)).catch(this.error);
-    }
+    const perKwh = { units: { en: `${symbol}/kWh` }, decimals: 4 };
+    if (this.hasCapability(COST_TODAY)) await this.setCapabilityOptions(COST_TODAY, { title: { en: 'Cost today' }, units: { en: symbol }, decimals: 2 }).catch(this.error);
+    if (this.hasCapability(PRICE_PAID)) await this.setCapabilityOptions(PRICE_PAID, { title: { en: 'Price paid today' }, ...perKwh }).catch(this.error);
+    if (this.hasCapability(PRICE_AVERAGE)) await this.setCapabilityOptions(PRICE_AVERAGE, { title: { en: 'Average price today' }, ...perKwh }).catch(this.error);
     for (const zone of this.meteredZones() || []) await zone.applyCurrency(symbol);
   }
 

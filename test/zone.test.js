@@ -315,3 +315,22 @@ test('temperature choices: one with a value first, then the plain one', () => {
   const both = temperatureCapabilities({ 'measure_temperature.floor': t(24.5), 'measure_temperature': t(20.5) });
   assert.deepStrictEqual(both.map((cap) => cap.id), ['measure_temperature', 'measure_temperature.floor']);
 });
+
+test('aimsAtTarget: no target while the only A/C runs its fan in eco', () => {
+  const ac = { id: 'ac', control: 'ac', ecoMode: 'fan', modes: ['heat', 'cool', 'off', 'fan'], min: 10 };
+  assert.strictEqual(pipeline.aimsAtTarget(decide(), [ac]), true);
+  assert.strictEqual(pipeline.aimsAtTarget(decide({ occupancy: 'away' }), [ac]), false);
+  // An A/C with an eco setpoint aims at eco.
+  assert.strictEqual(pipeline.aimsAtTarget(decide({ occupancy: 'away' }), [{ ...ac, ecoMode: 'setback' }]), true);
+  // A thermostat next to the fan A/C still aims at eco.
+  assert.strictEqual(pipeline.aimsAtTarget(decide({ occupancy: 'away' }), [ac, { id: 't', control: 'thermostat', min: 5 }]), true);
+});
+
+test('aimsAtTarget: relays aim while heating, an enable relay not in eco', () => {
+  const band = { id: 'r', control: 'relay', relayMode: 'thermostat' };
+  const enable = { id: 'e', control: 'relay', relayMode: 'enable' };
+  assert.strictEqual(pipeline.aimsAtTarget(decide({ occupancy: 'away' }), [band]), true);
+  assert.strictEqual(pipeline.aimsAtTarget(decide(), [enable]), true);
+  assert.strictEqual(pipeline.aimsAtTarget(decide({ occupancy: 'away' }), [enable]), false);
+  assert.strictEqual(pipeline.aimsAtTarget(decide({ season: 'off' }), [band]), false);
+});

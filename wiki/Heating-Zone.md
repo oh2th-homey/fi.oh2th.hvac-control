@@ -18,7 +18,8 @@ The zone shows:
   the zone's devices off.
 - **Boost**: comfort plus the boost amount for the boost time. Press it again to stop early.
 - **Target now** (the dial, read only): the temperature the zone aims at right now. Change
-  comfort heat and eco heat instead.
+  comfort heat and eco heat instead. Empty when no device aims at a temperature, for example an
+  air conditioner on fan in eco.
 - **Follow home**: hours left, shown only while a temporary Follow home runs (see
   [Guests in the guest room](How-to#guests-in-the-guest-room)).
 - The zone temperature and humidity, and a **Reason** that explains what the zone does.

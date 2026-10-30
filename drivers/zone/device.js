@@ -22,8 +22,8 @@ const POWER_OPTIONS = { title: { en: 'Heating power' }, units: { en: 'W' }, deci
 // Meters report every few seconds with a watt or two of noise: heating power shows changes of at least this (W).
 // Today's energy, cost and price paid, shown with the power meters (lib/daily.js).
 const ENERGY_TODAY = 'meter_power.today';
-const COST_TODAY = 'num_cost_today';
-const PRICE_PAID = 'num_price_paid';
+const COST_TODAY = 'measure_monetary.cost_today';
+const PRICE_PAID = 'measure_monetary.price_paid';
 const POWER_STEP = 5;
 const FOLLOW_STEP_MS = 24 * 60 * 60 * 1000;
 // Boost from a flow token is capped like the card's own limit.
@@ -93,8 +93,8 @@ module.exports = class zoneDevice extends mainDevice {
   }
 
   /**
-   * @description Comfort cool and eco cool are shown only when the zone has cooling, that is an A/C member; heating power
-   * only when it has a power meter.
+   * @description Comfort cool and eco cool are shown only when the zone has cooling, that is an A/C member; heating power,
+   * energy and cost only when it has a power meter; Follow home only while it runs.
    */
   async checkCapabilities() {
     const capabilities = [...(this.driver.manifest.capabilities || [])];
@@ -129,9 +129,8 @@ module.exports = class zoneDevice extends mainDevice {
    * @description Cost today and price paid in the controller's currency.
    */
   async applyCurrency(symbol = this.homey.app.currencySymbol()) {
-    const options = (id, units) => ({ title: this.homey.manifest.capabilities[id].title, decimals: this.homey.manifest.capabilities[id].decimals, units: { en: units } });
-    if (this.hasCapability(COST_TODAY)) await this.setCapabilityOptions(COST_TODAY, options(COST_TODAY, symbol)).catch(this.error);
-    if (this.hasCapability(PRICE_PAID)) await this.setCapabilityOptions(PRICE_PAID, options(PRICE_PAID, `${symbol}/kWh`)).catch(this.error);
+    if (this.hasCapability(COST_TODAY)) await this.setCapabilityOptions(COST_TODAY, { title: { en: 'Cost today' }, units: { en: symbol }, decimals: 2 }).catch(this.error);
+    if (this.hasCapability(PRICE_PAID)) await this.setCapabilityOptions(PRICE_PAID, { title: { en: 'Price paid today' }, units: { en: `${symbol}/kWh` }, decimals: 4 }).catch(this.error);
   }
 
   async setCapabilityListeners() {
@@ -684,7 +683,10 @@ module.exports = class zoneDevice extends mainDevice {
     await this.applyRelays(ms);
     await this.saveMemberState();
 
-    const target = round1(decision.target);
+    // Target now only while a member aims at it, e.g. not while an A/C runs its fan in eco.
+    const lastModes = Object.fromEntries(Object.entries(this.memberState).map(([id, st]) => [id, st.mode]));
+    const aiming = pipeline.aimsAtTarget(decision, this.getMembers(), { temperature: this.getCapabilityValue(TEMPERATURE), lastModes });
+    const target = aiming ? round1(decision.target) : null;
     const reason = this.reasonText();
     const changed = target !== null && target !== this.getCapabilityValue(TARGET);
     // No target in manual or when members are off: show none instead of the last one.
