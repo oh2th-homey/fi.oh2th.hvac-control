@@ -53,6 +53,8 @@ module.exports = class zoneDevice extends mainDevice {
     this.windowWasOpen = false;
     this.members = this.homey.app.members;
     this.subscriptions = [];
+    // Member capabilities whose subscription failed, retried every 5 minutes.
+    this.failedSubscriptions = [];
     this.decision = null;
     this.issues = [];
     this.lastShared = this.getStoreValue('lastShared') || null;
@@ -146,11 +148,13 @@ module.exports = class zoneDevice extends mainDevice {
       await this.evaluate({ urgent: true });
       return;
     }
+    const minutes = localTime(this, now).minutes;
+    if (this.failedSubscriptions && this.failedSubscriptions.length && minutes % 5 === 0) await this.retrySubscriptions();
     this.updateClimate(ms);
     if (await this.updateFollowHours(ms)) {
       this.log(`${this.getName()} - onInterval - Follow home ended`);
       await this.evaluate({ urgent: true });
-    } else if (localTime(this, now).minutes % 15 === 0) {
+    } else if (minutes % 15 === 0) {
       await this.evaluate();
     } else if (this.windowOpen(ms) !== this.windowWasOpen) {
       // A door or window passed its delay, or closed: act now, not at the next quarter.
@@ -381,21 +385,44 @@ module.exports = class zoneDevice extends mainDevice {
       if (member.contact) caps.push('alarm_contact');
       if (member.power) caps.push('measure_power');
       for (const cap of caps) {
-        const listener = (value) => this.onMemberReport(member, cap, value);
-        try {
-          await this.members.subscribe(member.id, cap, listener);
-          this.subscriptions.push({ id: member.id, cap, listener });
-        } catch (error) {
-          // onoff is optional on thermostats; only report other missing capabilities.
-          if (!(cap === 'onoff' && member.control === 'thermostat')) this.error(`${this.getName()} - subscribeMembers - ${member.name} ${cap}: ${error}`);
-        }
+        if (await this.subscribeMember(member, cap)) continue;
+        // onoff is optional on thermostats; other capabilities are tried again later (retrySubscriptions).
+        if (!(cap === 'onoff' && member.control === 'thermostat')) this.failedSubscriptions.push({ member, cap });
       }
+    }
+  }
+
+  /**
+   * @description Realtime reports of one member capability; false when it failed, e.g. a cloud device not answering.
+   */
+  async subscribeMember(member, cap) {
+    const listener = (value) => this.onMemberReport(member, cap, value);
+    try {
+      await this.members.subscribe(member.id, cap, listener);
+      this.subscriptions.push({ id: member.id, cap, listener });
+      return true;
+    } catch (error) {
+      if (!(cap === 'onoff' && member.control === 'thermostat')) this.error(`${this.getName()} - subscribeMember - ${member.name} ${cap}: ${error}`);
+      return false;
+    }
+  }
+
+  /**
+   * @description Try the failed member subscriptions again, so a sensor that was briefly unavailable comes back by itself.
+   */
+  async retrySubscriptions() {
+    const failed = this.failedSubscriptions;
+    this.failedSubscriptions = [];
+    for (const { member, cap } of failed) {
+      if (await this.subscribeMember(member, cap)) this.log(`${this.getName()} - retrySubscriptions - ${member.name} ${cap} recovered`);
+      else this.failedSubscriptions.push({ member, cap });
     }
   }
 
   unsubscribeMembers() {
     for (const { id, cap, listener } of this.subscriptions || []) this.members.unsubscribe(id, cap, listener);
     this.subscriptions = [];
+    this.failedSubscriptions = [];
   }
 
   async saveMemberState() {
