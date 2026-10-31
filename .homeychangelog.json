@@ -1,5 +1,8 @@
 {
   "1.0.0": {
     "en": "First version!"
+  },
+  "1.1.0": {
+    "en": "Energy and cost per zone, cooling with A/Cs, outdoor sensor, auxiliary heaters, fewer price peaks and fixes."
   }
 }
