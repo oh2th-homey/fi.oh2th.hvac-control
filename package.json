@@ -1,6 +1,6 @@
 {
   "name": "fi.oh2th.hvac-control",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "app.js",
   "scripts": {
     "test": "node --test",
@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "homey-api": "^3.21.2",
-    "oh2th-homey-helpers": "github:oh2th-homey/fi.oh2th.homey-helpers#v0.3.0"
+    "oh2th-homey-helpers": "github:oh2th-homey/fi.oh2th.homey-helpers#v0.4.0"
   },
   "engines": {
     "node": ">=22"

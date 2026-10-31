@@ -9,7 +9,8 @@ mode), the price now and Boost (on, off, toggle). The app adds these:
   prices**.
 - Conditions: **Occupancy is**, **Long absence is on**, **Price is expensive**.
 - Triggers: **Occupancy changed**, **Long absence changed**, **Expensive now changed**, **Prices
-  imported**, **Prices missing for tomorrow** (once a day at the check time).
+  imported**, **Prices missing for tomorrow** (once a day at the check time). The **Occupancy
+  changed** token is `present`, `coming_home` or `away`.
 
 ## Heating Zone
 

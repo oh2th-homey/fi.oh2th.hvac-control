@@ -111,8 +111,10 @@ No device interval: periodic work runs from `onInterval(now)`, called by the app
   `await this.setValue(key, value, check)`; on error `setUnavailable(error)` and log.
 - `setValue(key, value, firstRun = false, delay = 10)`: only if `hasCapability(key)`, log when
   changed, `setCapabilityValue(…).catch(this.error)`. On change and not `firstRun`, fire the
-  device trigger `<key>_changed` (dots → underscores) for `is_*` booleans and `num_*` numbers when
-  that trigger exists in `this.homey.manifest.flow.triggers`, token `{ [key]: value }`.
+  device trigger `<key>_changed` (dots → underscores) for `is_*` booleans when that trigger
+  exists in `this.homey.manifest.flow.triggers`, token `{ [key]: value }`. Homey itself runs
+  `<key>_changed` for custom number/enum/string capabilities and `<key>_true`/`<key>_false` for
+  booleans: define those cards but never fire them from code (flows would run twice).
 - `checkCapabilities(ctx)` / `updateCapabilities(ctx, driverCaps, deviceCaps)` (helpers package):
   diff the driver manifest against the device, remove old then add new caps with short sleeps,
   so changing `driver.compose.json` upgrades existing devices. Await it in `onInit`.
