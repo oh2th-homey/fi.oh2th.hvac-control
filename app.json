@@ -937,7 +937,7 @@
               "label": {
                 "en": "Minimum price difference"
               },
-              "value": 0.005,
+              "value": 0.01,
               "min": 0,
               "max": 1,
               "step": 0.001,
@@ -1151,6 +1151,17 @@
                   }
                 }
               ]
+            },
+            {
+              "id": "auxiliary",
+              "type": "checkbox",
+              "label": {
+                "en": "Auxiliary heater"
+              },
+              "value": false,
+              "hint": {
+                "en": "Stays at eco and goes to comfort only while the zone is colder than comfort, e.g. a ceiling heater next to a heat pump. Best with a room sensor."
+              }
             },
             {
               "id": "low_temp_alarm",

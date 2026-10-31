@@ -62,6 +62,28 @@ test('rate is highest matches the original script', () => {
   assert.deepStrictEqual(flagged('2026-11-10', SPIKES), [13, 30, 31, 47, 80]);
 });
 
+test('rate is highest counts a run of high quarters across the hour', () => {
+  // Recorded night (anonymised): a flat 0.1882 stretch from :45 over the hour into the :15 before a drop was flagged at
+  // the :15 when the run was counted inside the clock hour only.
+  const values = Array(96).fill(0.15);
+  values.fill(0.1882, 43, 47);
+  values[47] = 0.1854;
+  assert.deepStrictEqual(flagged('2026-11-10', values), []);
+  // A real two-quarter spike over the hour boundary is still a peak.
+  const spike = Array(96).fill(0.15);
+  spike[43] = 0.19;
+  spike[44] = 0.19;
+  assert.deepStrictEqual(flagged('2026-11-10', spike), [43, 44]);
+});
+
+test('rate is highest ignores bumps below the minimum difference', () => {
+  // Recorded night: 0.1563 between 0.1558 and 0.1544 was a peak with the old 0.005 default. The last quarter,
+  // about 0.02 above its neighbours, still is.
+  const values = [0.1529, 0.1497, 0.1491, 0.1558, 0.1563, 0.1544, 0.1571, 0.1464, 0.1505, 0.1512, 0.1512, 0.1512, 0.1305, 0.1295, 0.1129, 0.1304];
+  const day = [...Array(40).fill(0.15), ...values, ...Array(40).fill(0.11)];
+  assert.deepStrictEqual(flagged('2026-11-10', day), [55]);
+});
+
 test('rate is highest uses tomorrow across midnight', () => {
   const today = Array(96).fill(0.05);
   today[95] = 0.12;
@@ -130,7 +152,7 @@ test('above average needs pct and the minimum delta', () => {
   assert.strictEqual(prices.aboveAverage(0.12, 0.1, 30).expensive, false);
   // Near-zero day: 0.003 is 3x the average but only 0.002 above it.
   assert.strictEqual(prices.aboveAverage(0.003, 0.001, 30).expensive, false);
-  assert.strictEqual(prices.aboveAverage(-0.004, -0.01, 30).expensive, true);
+  assert.strictEqual(prices.aboveAverage(-0.004, -0.02, 30).expensive, true);
 });
 
 test('evaluate: off, unknown, hourly fallback, until', () => {

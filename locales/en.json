@@ -115,7 +115,9 @@
     "always_comfort": "Always comfort",
     "expensive_off": "Price peak: off",
     "eco_equals_comfort": "eco = comfort",
-    "follow_home": "Follow home until __until__"
+    "follow_home": "Follow home until __until__",
+    "auxiliary": "Auxiliary: eco",
+    "auxiliary_needed": "Auxiliary needed: comfort"
   },
   "member": {
     "heating_device_cooling": "off (heating only)",

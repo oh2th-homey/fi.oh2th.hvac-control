@@ -26,8 +26,9 @@ goes back to Always eco.
 1. Import the prices (see [Prices](Prices)).
 2. Choose the price model in the controller settings:
    - **Rate is highest** (default, needs 15-minute prices): only short peaks of one or two
-     quarters count. A price must also be at least the **minimum price difference** (default
-     0.005 per kWh) above the local median, so cheap and flat days have no peaks.
+     quarters count, also across the hour. A price must also be at least the **minimum price
+     difference** (default 0.01 per kWh) above the local median, so cheap and flat days and small
+     bumps have no peaks: a smaller peak only moves the heat by a quarter and saves nothing.
    - **Above average**: every quarter more than the percentage (default 30 %) above today's
      average counts.
 3. During a peak the controller shows **Expensive now**. Zones go to eco, or off if their **At

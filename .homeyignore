@@ -3,3 +3,4 @@ local_assets/
 wiki/
 .github/
 tools/
+.env

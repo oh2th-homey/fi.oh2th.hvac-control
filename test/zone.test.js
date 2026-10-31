@@ -334,3 +334,30 @@ test('aimsAtTarget: relays aim while heating, an enable relay not in eco', () =>
   assert.strictEqual(pipeline.aimsAtTarget(decide({ occupancy: 'away' }), [enable]), false);
   assert.strictEqual(pipeline.aimsAtTarget(decide({ season: 'off' }), [band]), false);
 });
+
+test('auxiliary: eco until the zone falls short of comfort, with a dead band', () => {
+  assert.strictEqual(zone.auxiliaryNeeded(20.6, 21, false, null), false);
+  assert.strictEqual(zone.auxiliaryNeeded(20.5, 21, false, null), true);
+  assert.strictEqual(zone.auxiliaryNeeded(20.8, 21, false, true), true);
+  assert.strictEqual(zone.auxiliaryNeeded(21, 21, false, true), false);
+  assert.strictEqual(zone.auxiliaryNeeded(24.5, 24, true, null), true);
+  assert.strictEqual(zone.auxiliaryNeeded(null, 21, false, false), true);
+
+  const warm = decide({}, { auxiliary: true }, { temperature: 22 });
+  assert.deepStrictEqual([warm.aim, warm.target, warm.auxiliaryComfort, warm.reasons.at(-1).code], ['eco', 19, false, 'auxiliary']);
+  const cold = decide({}, { auxiliary: true }, { temperature: 20 });
+  assert.deepStrictEqual([cold.aim, cold.target, cold.auxiliaryComfort, cold.reasons.at(-1).code], ['comfort', 21, true, 'auxiliary_needed']);
+  assert.strictEqual(decide({}, {}, { temperature: 22 }).auxiliaryComfort, null);
+});
+
+test('auxiliary: price peaks change nothing while not needed, still apply when needed', () => {
+  const warm = decide({ expensive: true }, { auxiliary: true, pricePeak: 'off' }, { temperature: 22 });
+  assert.deepStrictEqual([warm.action, warm.aim, warm.pricePeak], ['heat', 'eco', false]);
+  const cold = decide({ expensive: true }, { auxiliary: true }, { temperature: 20 });
+  assert.deepStrictEqual([cold.aim, cold.pricePeak, cold.reasons.at(-1).code], ['eco', true, 'expensive']);
+  assert.strictEqual(decide({ expensive: true }).pricePeak, true);
+  assert.strictEqual(decide({ occupancy: 'away' }).pricePeak, false);
+  // Away, boost and window keep their own rules.
+  assert.strictEqual(decide({ occupancy: 'away' }, { auxiliary: true }, { temperature: 15 }).aim, 'eco');
+  assert.strictEqual(decide({}, { auxiliary: true, boostUntil: NOW + 60000 }, { temperature: 22 }).aim, 'boost');
+});

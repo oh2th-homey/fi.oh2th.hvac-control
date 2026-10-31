@@ -48,6 +48,17 @@
         ]
       },
       {
+        "id": "auxiliary",
+        "type": "checkbox",
+        "label": {
+          "en": "Auxiliary heater"
+        },
+        "value": false,
+        "hint": {
+          "en": "Stays at eco and goes to comfort only while the zone is colder than comfort, e.g. a ceiling heater next to a heat pump. Best with a room sensor."
+        }
+      },
+      {
         "id": "low_temp_alarm",
         "type": "number",
         "label": {

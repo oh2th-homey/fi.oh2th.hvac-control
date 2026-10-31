@@ -35,6 +35,11 @@ The zone shows:
 
 - **Heat all year**: keeps heating in the cooling and off seasons, for example a bathroom floor.
 - **Occupancy**: Follows home, Always eco (for example a guest room) or Always comfort.
+- **Auxiliary heater**: for a heater that backs up another one, such as ceiling heaters next to a
+  heat pump. The zone stays at eco and goes to comfort only while the room is half a degree (°C)
+  or more below comfort, then back to eco when it reaches comfort. Price peaks don't change it
+  while it is at eco. Away, long absence, boost and open windows work as usual. Works best with
+  a room temperature sensor in the zone rather than only the heater's own.
 - **Low temperature alarm** (default 10 °C, 0 = off).
 - **Boost amount** and **Boost time**.
 - **Eco after door/window open**: how long a door or window may be open before the zone goes to

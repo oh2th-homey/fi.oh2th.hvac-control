@@ -588,7 +588,7 @@ module.exports = class zoneDevice extends mainDevice {
       aim: decision.aim || null,
       windowOpen: this.windowWasOpen === true,
       // The price peak acted: eco or off because of the price, not only a zone that follows prices.
-      pricePeak: decision.priceDriven === true && (decision.eco === true || decision.offCause === 'expensive_off'),
+      pricePeak: decision.pricePeak === true,
       lowTemperature: decision.lowTemperature === true
     };
   }
@@ -668,6 +668,8 @@ module.exports = class zoneDevice extends mainDevice {
         followUntil: this.followUntil(ms),
         windowOpen,
         heatAllYear: this.getSetting('heat_all_year') === true,
+        auxiliary: this.getSetting('auxiliary') === true,
+        auxiliaryComfort: this.getStoreValue('auxiliaryComfort'),
         pricePeak: this.pricePeak(),
         outdoorLimit: { enabled: this.getSetting('outdoor_limit') === true, onBelow: this.getSetting('outdoor_on_below'), offAbove: this.getSetting('outdoor_off_above') },
         outdoorAllowed: this.getStoreValue('outdoorAllowed')
@@ -677,6 +679,7 @@ module.exports = class zoneDevice extends mainDevice {
     });
     this.decision = decision;
     if (decision.outdoorAllowed !== this.getStoreValue('outdoorAllowed')) await this.setStoreValue('outdoorAllowed', decision.outdoorAllowed).catch(this.error);
+    if (decision.auxiliaryComfort !== this.getStoreValue('auxiliaryComfort')) await this.setStoreValue('auxiliaryComfort', decision.auxiliaryComfort).catch(this.error);
 
     this.issues = [];
     await this.applyThermostats(ms);
