@@ -226,7 +226,7 @@ module.exports = class hvacDevice extends mainDevice {
   }
 
   /**
-   * @description Set occupancy or season, fire its changed trigger and let the zones re-evaluate.
+   * @description Set occupancy or season and let the zones re-evaluate.
    * @returns {Promise<boolean>} true when changed
    */
   async changeEnum(key, value) {
@@ -236,8 +236,7 @@ module.exports = class hvacDevice extends mainDevice {
     const capabilityValue = key === 'season' ? SEASON_MODE[value] : value;
     if (capabilityValue === this.getCapabilityValue(capability)) return false;
     await this.setValue(capability, capabilityValue);
-    // Standard capabilities (season = thermostat_mode) get Homey's own changed trigger.
-    if (capability.startsWith('enum_')) await this.triggerFlow(`${capability}_changed`, { [capability]: this.homey.__(`${key}.${value}`) });
+    // Homey fires the "<capability>_changed" trigger itself for enum capabilities (enum_occupancy, thermostat_mode).
     await this.homey.app.onSharedStateChanged();
     return true;
   }
